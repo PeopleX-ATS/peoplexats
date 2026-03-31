@@ -325,6 +325,21 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
   </div>
 
   <!-- ══ ONBOARDING PAGE ══ -->
+  <!-- EMAIL CONFIRMATION PAGE -->
+  <div class="page" id="page-confirm-email">
+    <div class="auth-card" style="text-align:center;max-width:440px;margin:0 auto">
+      <div style="font-size:48px;margin-bottom:16px">&#128236;</div>
+      <h2 class="auth-title" style="margin-bottom:10px">Check your email</h2>
+      <p style="font-size:14px;color:var(--mu);line-height:1.7;margin-bottom:6px">We sent a confirmation link to:</p>
+      <p style="font-size:15px;font-weight:700;color:var(--o);margin-bottom:20px" id="confirm-email-addr">your email</p>
+      <p style="font-size:13px;color:var(--mu);line-height:1.7;margin-bottom:24px">
+        Click the link in that email to verify your account. Then come back here and sign in to complete your workspace setup.
+      </p>
+      <a href="peoplexats_auth.html" class="auth-btn" style="text-decoration:none;display:block;text-align:center;margin-bottom:14px">Go to Sign In</a>
+      <p style="font-size:12px;color:var(--mu)">Didn't get it? Check your spam folder.</p>
+    </div>
+  </div>
+
   <div class="page onboard-page" id="page-onboard">
     <div class="onboard-glow"></div>
     <div class="onboard-card">
@@ -604,7 +619,13 @@ async function handleLogin() {
   setLoading('login-btn', true, 'Signing in');
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   setLoading('login-btn', false, 'Sign in to PeopleX');
-  if(error) return setAlert('login-alert', error.message);
+  if(error) {
+    var msg = error.message;
+    if(msg && msg.toLowerCase().includes('email not confirmed')) {
+      msg = 'Please confirm your email first. Check your inbox for the confirmation link.';
+    }
+    return setAlert('login-alert', msg);
+  }
   currentUser = data.user;
   showToast('Welcome back! 👋', 'success');
   await loadWorkspaceContext();
@@ -638,8 +659,9 @@ async function handleSignup() {
   if(signupEmail) {
     sendEmail('welcome', signupEmail, {name: signupName || 'there'});
   }
-  showToast("Account created! Let's set up your workspace.", 'success');
-  setTimeout(function(){ showPage('onboard'); }, 600);
+  // Show email confirmation screen - user must confirm before onboarding
+  showPage('confirm-email');
+  document.getElementById('confirm-email-addr').textContent = email;
 }
 
 // ══════════════════════════════════════════
@@ -793,35 +815,21 @@ async function handleFinish(skip=false) {
     const website = document.getElementById('ob-website').value.trim();
     const slug = document.getElementById('ob-slug').value.trim();
 
-    // 1. Create workspace
-    const { data: workspace, error: wsErr } = await sb
-      .from('workspaces')
-      .insert({
-        name: company,
-        careers_slug: slug,
-        industry,
-        size,
-        country,
-        preferred_currency: currency,
-        website: website || null,
-        owner_id: currentUser.id,
-      })
-      .select()
-      .single();
-
-    if(wsErr) throw wsErr;
-
-    // 2. Create owner team_member record
+    // 1 + 2. Create workspace AND team_member via security definer RPC
+    // This bypasses RLS for initial onboarding safely
     const fullName = (currentUser.user_metadata && currentUser.user_metadata.full_name) || '';
-    const { error: memErr } = await sb.from('team_members').insert({
-      workspace_id: workspace.id,
-      user_id: currentUser.id,
-      role: 'admin',
-      full_name: fullName,
-      email: currentUser.email,
-      status: 'active',
+    const { data: workspace, error: wsErr } = await sb.rpc('create_workspace_for_user', {
+      p_name: company,
+      p_careers_slug: slug,
+      p_industry: industry,
+      p_size: size,
+      p_country: country,
+      p_preferred_currency: currency,
+      p_website: website || '',
+      p_full_name: fullName,
+      p_email: currentUser.email
     });
-    if(memErr) throw memErr;
+    if(wsErr) throw wsErr;
 
     // 3. Send team invites if not skipped
     if(!skip) {
