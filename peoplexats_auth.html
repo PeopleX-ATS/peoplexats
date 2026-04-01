@@ -566,12 +566,7 @@ async function loadWorkspaceContext() {
 }
 
 function enterApp() {
-  const name = (currentWorkspace && currentWorkspace.name) || 'your workspace';
-  const slug = (currentWorkspace && currentWorkspace.careers_slug) || '—';
-  document.getElementById('app-welcome').textContent = `Welcome back to ${name} 👋`;
-  document.getElementById('app-sub').textContent = 'Your workspace is set up and ready. Full app coming next.';
-  document.getElementById('app-careers-url').textContent = `ats.peoplex.africa/careers/${slug}`;
-  showPage('app');
+  window.location.href = 'peoplexats_dashboard.html';
 }
 
 // ══════════════════════════════════════════
