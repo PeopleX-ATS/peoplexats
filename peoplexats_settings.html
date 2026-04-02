@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PeopleX — Settings</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --o:#fe572a;--od:rgba(254,87,42,0.13);--og:rgba(254,87,42,0.3);
+  --g:#8cc74f;--gd:rgba(140,199,79,0.12);
+  --ink:#080706;--ink2:#111009;--ink3:#1a1814;
+  --w:#fff;--mu:rgba(255,255,255,0.42);--mu2:rgba(255,255,255,0.14);
+  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.11);
+  --err:#f87171;--errd:rgba(248,113,113,0.11);
+  --amber:#fbbf24;
+  --f:system-ui,sans-serif;--ez:cubic-bezier(0.16,1,0.3,1);
+  --sidebar:240px;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--f);color:var(--w);-webkit-font-smoothing:antialiased;background:var(--ink)}
+#app{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
+
+.sidebar{width:var(--sidebar);flex-shrink:0;height:100vh;background:var(--ink2);border-right:1px solid var(--bd2);display:flex;flex-direction:column}
+.sidebar-logo{padding:18px 20px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.logo-mark{width:26px;height:26px;background:var(--o);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0}
+.logo-text{font-size:15px;font-weight:800;color:var(--w);letter-spacing:-.02em}
+.sidebar-ws{padding:12px 20px 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;margin:1px 8px;border-radius:8px;font-size:13px;font-weight:600;color:var(--mu);text-decoration:none;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.nav-item:hover{color:var(--w);background:rgba(255,255,255,.04)}
+.nav-item.active{color:var(--w);background:var(--od);border-color:rgba(254,87,42,.2)}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.sidebar-bottom{margin-top:auto;padding:10px 8px;border-top:1px solid var(--bd)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer}
+.user-av{width:28px;height:28px;border-radius:50%;background:var(--od);border:1px solid rgba(254,87,42,.25);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--o);flex-shrink:0}
+.user-name{font-size:12.5px;font-weight:600;color:var(--w)}
+.user-role{font-size:11px;color:var(--mu)}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{height:54px;flex-shrink:0;background:rgba(8,7,6,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd2);display:flex;align-items:center;padding:0 24px}
+.topbar-title{font-size:15px;font-weight:800;color:var(--w);letter-spacing:-.02em}
+
+.settings-wrap{flex:1;display:flex;overflow:hidden}
+.settings-nav{width:200px;flex-shrink:0;padding:16px 12px;border-right:1px solid var(--bd2);overflow-y:auto;background:rgba(8,7,6,.3)}
+.snav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--mu);cursor:pointer;transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+.snav-item:hover{color:var(--w);background:rgba(255,255,255,.04)}
+.snav-item.active{color:var(--w);background:var(--od);border-color:rgba(254,87,42,.18)}
+.snav-icon{font-size:14px;flex-shrink:0}
+.snav-divider{height:1px;background:var(--bd);margin:10px 4px}
+
+.settings-content{flex:1;overflow-y:auto;padding:28px 32px}
+.settings-content::-webkit-scrollbar{width:4px}
+.settings-content::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.settings-tab{display:none}
+.settings-tab.active{display:block}
+
+.s-section{background:var(--ink2);border:1px solid var(--bd2);border-radius:16px;padding:24px;margin-bottom:20px}
+.s-section-title{font-size:14px;font-weight:700;color:var(--w);margin-bottom:4px;display:flex;align-items:center;gap:7px}
+.s-section-title::before{content:'⟩';color:var(--o);font-size:15px;font-weight:800}
+.s-section-sub{font-size:13px;color:var(--mu);margin-bottom:20px;line-height:1.6}
+
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--ink3);border:1px solid var(--bd2);color:var(--w);font-family:var(--f);font-size:13.5px;padding:10px 13px;border-radius:8px;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.35)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;cursor:pointer}
+.field textarea{min-height:80px;resize:vertical;line-height:1.6}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.2)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--o);box-shadow:0 0 0 3px var(--od)}
+.field-hint{font-size:12px;color:var(--mu);margin-top:5px;line-height:1.5}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bd)}
+.toggle-row:last-child{border-bottom:none;padding-bottom:0}
+.toggle-row:first-child{padding-top:0}
+.toggle-info{flex:1;min-width:0}
+.toggle-label{font-size:13px;font-weight:600;color:var(--w);margin-bottom:2px}
+.toggle-desc{font-size:12px;color:var(--mu);line-height:1.5}
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0;margin-left:16px}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;border-radius:12px;background:rgba(255,255,255,.12);cursor:pointer;transition:background .2s}
+.toggle input:checked + .toggle-track{background:var(--o)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s var(--ez);pointer-events:none}
+.toggle input:checked ~ .toggle-thumb{transform:translateX(18px)}
+
+.slug-preview{display:flex;align-items:center;gap:6px;background:var(--ink3);border:1px solid var(--bd);border-radius:7px;padding:9px 12px;margin-top:6px;font-size:12px}
+.slug-base{color:rgba(255,255,255,.3)}
+.slug-val{color:var(--o);font-weight:600}
+
+.color-pick{display:flex;align-items:center;gap:10px}
+.color-swatch{width:36px;height:36px;border-radius:8px;border:2px solid var(--bd2);cursor:pointer;flex-shrink:0;transition:border-color .2s}
+.color-swatch:hover{border-color:rgba(255,255,255,.3)}
+.color-presets{display:flex;gap:6px;flex-wrap:wrap}
+.color-preset{width:24px;height:24px;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:all .15s}
+.color-preset:hover{transform:scale(1.1)}
+.color-preset.selected{border-color:#fff}
+
+.team-table{width:100%;border-collapse:collapse}
+.team-table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);padding:9px 12px;border-bottom:1px solid var(--bd2);text-align:left}
+.team-table td{font-size:13px;padding:11px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.team-av{width:30px;height:30px;border-radius:50%;background:var(--od);border:1px solid rgba(254,87,42,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--o)}
+.role-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:100px}
+.role-admin{background:var(--od);color:var(--o);border:1px solid rgba(254,87,42,.2)}
+.role-recruiter{background:var(--gd);color:var(--g);border:1px solid rgba(140,199,79,.2)}
+.role-interviewer{background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.2)}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.status-active{background:var(--g)}
+.status-pending{background:var(--amber)}
+
+.int-card{background:var(--ink3);border:1px solid var(--bd2);border-radius:12px;padding:18px 20px;margin-bottom:12px}
+.int-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.int-card-name{font-size:14px;font-weight:700;color:var(--w)}
+.int-card-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px}
+.int-connected{background:var(--gd);color:var(--g);border:1px solid rgba(140,199,79,.2)}
+.int-disconnected{background:rgba(255,255,255,.05);color:var(--mu);border:1px solid var(--bd2)}
+.int-desc{font-size:12px;color:var(--mu);margin-bottom:12px;line-height:1.6}
+
+.fee-table{width:100%;border-collapse:collapse}
+.fee-table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);padding:8px 12px;border-bottom:1px solid var(--bd2);text-align:left}
+.fee-table td{font-size:13px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.fee-table tr:last-child td{border-bottom:none}
+
+/* ── Payment cards ── */
+.pay-card{background:var(--ink3);border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin-bottom:12px}
+.pay-card:last-child{margin-bottom:0}
+.pay-card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:12px}
+
+.danger-zone{background:var(--errd);border:1px solid rgba(248,113,113,.2);border-radius:12px;padding:18px 20px}
+.danger-title{font-size:13px;font-weight:700;color:var(--err);margin-bottom:6px}
+.danger-desc{font-size:12px;color:rgba(248,113,113,.7);margin-bottom:14px;line-height:1.6}
+
+.overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--ink2);border:1px solid var(--bd2);border-radius:18px;padding:28px;width:100%;max-width:440px;transform:scale(.96) translateY(8px);transition:transform .25s var(--ez)}
+.overlay.open .modal{transform:scale(1) translateY(0)}
+.modal-title{font-size:16px;font-weight:800;color:var(--w);margin-bottom:18px}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+
+.logo-upload{display:flex;align-items:center;gap:16px}
+.logo-preview{width:60px;height:60px;border-radius:12px;background:var(--ink3);border:2px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--o);overflow:hidden;flex-shrink:0}
+.logo-preview img{width:100%;height:100%;object-fit:cover}
+
+.btn{font-family:var(--f);font-size:12px;font-weight:700;border:none;padding:8px 16px;border-radius:7px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--o);color:#fff;box-shadow:0 2px 10px var(--od)}
+.btn-primary:hover:not(:disabled){background:#ff6a40;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-ghost{background:none;color:var(--mu);border:1px solid var(--bd2)}
+.btn-ghost:hover{color:var(--w);border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.04)}
+.btn-danger{background:none;color:var(--err);border:1px solid rgba(248,113,113,.2)}
+.btn-danger:hover{background:var(--errd)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.save-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.save-indicator{font-size:12px;color:var(--g);display:none}
+
+#loading{position:fixed;inset:0;z-index:999;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#loading p{font-size:13px;color:var(--mu)}
+.big-spinner{width:32px;height:32px;border:3px solid rgba(254,87,42,.3);border-top-color:var(--o);border-radius:50%;animation:sp .8s linear infinite}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+#toast{position:fixed;bottom:20px;right:20px;z-index:999;background:var(--ink2);border:1px solid var(--bd2);border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;display:none;max-width:320px}
+#toast.show{display:block;animation:ti .3s var(--ez)}
+#toast.success{border-color:rgba(140,199,79,.3);color:var(--g)}
+#toast.error{border-color:rgba(248,113,113,.3);color:var(--err)}
+#toast.info{border-color:rgba(254,87,42,.3);color:var(--o)}
+@keyframes ti{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:900px){
+  .sidebar,.settings-nav{display:none}
+  .field-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="big-spinner"></div><p>Loading settings…</p></div>
+<div id="toast"></div>
+
+<div id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">P</div>
+      <span class="logo-text">PeopleX</span>
+    </div>
+    <div class="sidebar-ws" id="ws-name">Workspace</div>
+    <nav style="padding:4px 0">
+      <a class="nav-item" href="peoplexats_dashboard.html"><span class="nav-icon">📊</span>Dashboard</a>
+      <a class="nav-item" href="peoplexats_jobs.html"><span class="nav-icon">💼</span>Jobs</a>
+      <a class="nav-item" href="peoplexats_pipeline.html"><span class="nav-icon">👥</span>Candidates</a>
+      <a class="nav-item" href="peoplexats_interviews.html"><span class="nav-icon">📅</span>Interviews</a>
+      <a class="nav-item" href="peoplexats_hires.html"><span class="nav-icon">🏆</span>Hires</a>
+      <a class="nav-item" href="peoplexats_notifications.html"><span class="nav-icon">💬</span>Notifications</a>
+      <a class="nav-item" href="peoplexats_analytics.html"><span class="nav-icon">📈</span>Analytics</a>
+      <a class="nav-item" href="peoplexats_agent.html"><span class="nav-icon">✦</span>HR Agent</a>
+      <a class="nav-item active" href="peoplexats_settings.html"><span class="nav-icon">⚙️</span>Settings</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-chip">
+        <div class="user-av" id="user-av">?</div>
+        <div>
+          <div class="user-name" id="user-name">Loading…</div>
+          <div class="user-role" id="user-role">Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Settings</span>
+    </div>
+
+    <div class="settings-wrap">
+      <nav class="settings-nav">
+        <div class="snav-item active" onclick="switchTab('general',this)"><span class="snav-icon">🏢</span>General</div>
+        <div class="snav-item" onclick="switchTab('careers',this)"><span class="snav-icon">🌐</span>Careers Page</div>
+        <div class="snav-item" onclick="switchTab('notifications',this)"><span class="snav-icon">🔔</span>Notifications</div>
+        <div class="snav-item" onclick="switchTab('integrations',this)"><span class="snav-icon">🔌</span>Integrations</div>
+        <div class="snav-divider"></div>
+        <div class="snav-item" onclick="switchTab('team',this)"><span class="snav-icon">👥</span>Team</div>
+        <div class="snav-divider"></div>
+        <div class="snav-item" onclick="switchTab('billing',this)"><span class="snav-icon">💰</span>Billing &amp; Fees</div>
+      </nav>
+
+      <div class="settings-content">
+
+        <!-- GENERAL -->
+        <div class="settings-tab active" id="tab-general">
+          <div class="s-section">
+            <div class="s-section-title">Company Profile</div>
+            <div class="s-section-sub">This information appears on your careers page and in candidate communications.</div>
+            <div style="margin-bottom:20px">
+              <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Company Logo</label>
+              <div class="logo-upload">
+                <div class="logo-preview" id="logo-preview">?</div>
+                <div>
+                  <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+                  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('logo-input').click()">Upload Logo</button>
+                  <div style="font-size:11px;color:var(--mu);margin-top:5px">PNG or JPG · Max 2MB · Square recommended</div>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Company Name *</label>
+              <input type="text" id="g-name" placeholder="Your Company Name">
+            </div>
+            <div class="field">
+              <label>Tagline <span style="color:var(--mu);font-weight:400;text-transform:none">(optional)</span></label>
+              <input type="text" id="g-tagline" placeholder="Your company tagline">
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Industry</label>
+                <select id="g-industry">
+                  <option value="">Select industry</option>
+                  <option>Technology</option><option>Finance &amp; Fintech</option><option>Healthcare</option>
+                  <option>E-commerce &amp; Retail</option><option>Media &amp; Entertainment</option>
+                  <option>Education &amp; EdTech</option><option>Logistics &amp; Supply Chain</option>
+                  <option>Agriculture &amp; AgriTech</option><option>Energy &amp; Utilities</option>
+                  <option>Real Estate &amp; PropTech</option><option>Professional Services</option>
+                  <option>NGO / Non-Profit</option><option>Government</option><option>Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Company Size</label>
+                <select id="g-size">
+                  <option value="">Select size</option>
+                  <option>1–10</option><option>11–50</option><option>51–200</option><option>200+</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Country</label>
+                <select id="g-country">
+                  <option value="Nigeria">Nigeria 🇳🇬</option><option value="Kenya">Kenya 🇰🇪</option>
+                  <option value="Ghana">Ghana 🇬🇭</option><option value="South Africa">South Africa 🇿🇦</option>
+                  <option value="Rwanda">Rwanda 🇷🇼</option><option value="Uganda">Uganda 🇺🇬</option>
+                  <option value="Tanzania">Tanzania 🇹🇿</option><option value="Egypt">Egypt 🇪🇬</option>
+                  <option value="Other">Other 🌍</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Default Currency</label>
+                <select id="g-currency">
+                  <option value="NGN">₦ Nigerian Naira (NGN)</option>
+                  <option value="USD">$ US Dollar (USD)</option>
+                  <option value="KES">KES Kenyan Shilling</option>
+                  <option value="GHS">GHS Ghanaian Cedi</option>
+                  <option value="ZAR">ZAR South African Rand</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Website</label>
+              <input type="url" id="g-website" placeholder="https://yourcompany.com">
+            </div>
+            <div class="save-row">
+              <button class="btn btn-primary" onclick="saveGeneral()">
+                <span class="spinner" id="gen-spinner" style="display:none"></span>Save Changes
+              </button>
+              <span class="save-indicator" id="gen-saved">✓ Saved</span>
+            </div>
+          </div>
+
+          <div class="s-section">
+            <div class="s-section-title">Brand Colour</div>
+            <div class="s-section-sub">Used on your public careers page buttons and accents.</div>
+            <div class="color-pick">
+              <input type="color" id="g-color" value="#fe572a" style="width:0;height:0;opacity:0;position:absolute" onchange="updateColorSwatch()">
+              <div class="color-swatch" id="color-swatch" style="background:#fe572a" onclick="document.getElementById('g-color').click()"></div>
+              <div>
+                <div class="color-presets" id="color-presets"></div>
+                <div style="font-size:11px;color:var(--mu);margin-top:6px">Click the swatch to pick a custom colour</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CAREERS -->
+        <div class="settings-tab" id="tab-careers">
+          <div class="s-section">
+            <div class="s-section-title">Careers Page URL</div>
+            <div class="s-section-sub">Your public URL where candidates discover and apply for your jobs.</div>
+            <div class="field">
+              <label>URL Slug *</label>
+              <input type="text" id="c-slug" placeholder="your-company-name" oninput="onSlugInput()">
+              <div class="slug-preview">
+                <span class="slug-base">ats.peoplex.africa/careers/</span>
+                <span class="slug-val" id="slug-preview-val">your-company</span>
+              </div>
+              <div class="field-hint">Only lowercase letters, numbers, and hyphens.</div>
+            </div>
+            <div class="save-row">
+              <button class="btn btn-primary btn-sm" onclick="saveSlug()">Update URL</button>
+            </div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-title">Careers Page Display</div>
+            <div class="s-section-sub">Control what candidates see when they visit your careers page.</div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Show salary ranges</div>
+                <div class="toggle-desc">Display min/max salary on job listings and detail pages.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="c-show-salary" onchange="saveField('show_salary',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Accept applications</div>
+                <div class="toggle-desc">Temporarily pause all applications across all open jobs.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="c-accepting" checked onchange="saveField('accepting_applications',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div class="settings-tab" id="tab-notifications">
+          <div class="s-section">
+            <div class="s-section-title">WhatsApp Notifications</div>
+            <div class="s-section-sub">Auto-send WhatsApp messages to candidates at key milestones. Requires OpenClaw WhatsApp API to be configured.</div>
+            <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Application received</div><div class="toggle-desc">Send a confirmation WhatsApp when a candidate applies.</div></div><label class="toggle"><input type="checkbox" id="n-app" onchange="saveField('notify_wa_app',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+            <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Shortlisted</div><div class="toggle-desc">Notify candidate when AI scores them ≥70 or they're manually shortlisted.</div></div><label class="toggle"><input type="checkbox" id="n-short" onchange="saveField('notify_wa_short',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+            <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Rejected</div><div class="toggle-desc">Send a courteous rejection message when a candidate is rejected.</div></div><label class="toggle"><input type="checkbox" id="n-reject" onchange="saveField('notify_wa_reject',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+            <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Fee invoice generated</div><div class="toggle-desc">Notify your team when a success fee invoice is created.</div></div><label class="toggle"><input type="checkbox" id="n-fee" onchange="saveField('notify_fee_invoice',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-title">Internal Notifications</div>
+            <div class="s-section-sub">Control email and in-app alerts for your recruiting team.</div>
+            <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">New application alert</div><div class="toggle-desc">Email the recruiter when a new candidate applies to their job.</div></div><label class="toggle"><input type="checkbox" id="n-new-app" onchange="saveField('notify_new_app',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+            <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">AI score ready</div><div class="toggle-desc">Alert when AI finishes scoring a new candidate.</div></div><label class="toggle"><input type="checkbox" id="n-ai" onchange="saveField('notify_ai_score',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          </div>
+        </div>
+
+        <!-- INTEGRATIONS -->
+        <div class="settings-tab" id="tab-integrations">
+          <div class="s-section">
+            <div class="s-section-title">OpenClaw Integration</div>
+            <div class="s-section-sub">Connect your OpenClaw instance to enable AI CV scoring, WhatsApp messaging, and the 24/7 HR Agent.</div>
+            <div class="int-card">
+              <div class="int-card-head"><div class="int-card-name">🤖 CV Scoring API</div><span class="int-card-badge" id="badge-cv">Not configured</span></div>
+              <div class="int-desc">Scores candidate CVs against job requirements. Falls back to Claude AI if not set.</div>
+              <div class="field" style="margin-bottom:0">
+                <label>OpenClaw CV Scoring URL</label>
+                <input type="url" id="i-cv-url" placeholder="https://your-openclaw.com">
+                <div class="field-hint">We'll call <code style="font-family:monospace;font-size:11px;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px">/score-cv</code> on this endpoint</div>
+              </div>
+            </div>
+            <div class="int-card">
+              <div class="int-card-head"><div class="int-card-name">💬 WhatsApp API</div><span class="int-card-badge" id="badge-wa">Not configured</span></div>
+              <div class="int-desc">Sends WhatsApp messages to candidates for confirmations, shortlisting, scheduling, and offers.</div>
+              <div class="field" style="margin-bottom:0">
+                <label>OpenClaw WhatsApp URL</label>
+                <input type="url" id="i-wa-url" placeholder="https://your-openclaw.com">
+                <div class="field-hint">We'll call <code style="font-family:monospace;font-size:11px;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px">/send-whatsapp</code> on this endpoint</div>
+              </div>
+            </div>
+            <div class="int-card">
+              <div class="int-card-head"><div class="int-card-name">✦ HR Agent URL</div><span class="int-card-badge" id="badge-agent">Not configured</span></div>
+              <div class="int-desc">Powers the 24/7 HR Agent chat. Falls back to Claude Sonnet if not set.</div>
+              <div class="field" style="margin-bottom:0">
+                <label>OpenClaw Agent URL</label>
+                <input type="url" id="i-agent-url" placeholder="https://your-openclaw.com/agent">
+                <div class="field-hint">We'll POST <code style="font-family:monospace;font-size:11px;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px">message</code> + <code style="font-family:monospace;font-size:11px;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px">system_context</code> to this endpoint</div>
+              </div>
+            </div>
+            <div class="save-row" style="margin-top:16px">
+              <button class="btn btn-primary" onclick="saveIntegrations()"><span class="spinner" id="int-spinner" style="display:none"></span>Save Integration URLs</button>
+              <button class="btn btn-ghost" onclick="testIntegrations()">Test Connections</button>
+              <span class="save-indicator" id="int-saved">✓ Saved</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEAM -->
+        <div class="settings-tab" id="tab-team">
+          <div class="s-section">
+            <div class="s-section-title">Team Members</div>
+            <div class="s-section-sub">Manage who has access to your PeopleX workspace.</div>
+            <div id="team-table-wrap" style="margin-bottom:16px"></div>
+            <button class="btn btn-primary btn-sm" onclick="openInviteModal()">+ Invite Team Member</button>
+          </div>
+        </div>
+
+        <!-- BILLING -->
+        <div class="settings-tab" id="tab-billing">
+
+          <div class="s-section">
+            <div class="s-section-title">PeopleX Pricing</div>
+            <div class="s-section-sub">PeopleX is completely free to use. You only pay a one-time success fee when a hire is confirmed. Your first hire is always free.</div>
+            <div style="background:var(--gd);border:1px solid rgba(140,199,79,.25);border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--g);display:flex;align-items:center;gap:8px">
+              🎉 <strong>First hire always free.</strong> No subscription, no setup fee, no hidden costs.
+            </div>
+            <div id="fee-band-display"></div>
+          </div>
+
+          <div class="s-section">
+            <div class="s-section-title">Fee Summary</div>
+            <div class="s-section-sub">Your success fee history at a glance.</div>
+            <div id="fee-summary"></div>
+          </div>
+
+          <!-- ── PAYMENT DETAILS: MoniePoint MFB + Paystack (GTB removed) ── -->
+          <div class="s-section">
+            <div class="s-section-title">Payment Details</div>
+            <div class="s-section-sub">Pay your PeopleX success fee via bank transfer or online using Paystack.</div>
+
+            <!-- MoniePoint MFB -->
+            <div class="pay-card">
+              <div class="pay-card-label">🏦 Bank Transfer</div>
+              <div style="font-size:15px;font-weight:800;color:var(--w);margin-bottom:6px">PeopleX Solutions</div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:13px;color:var(--mu)">Bank: <strong style="color:var(--w)">MoniePoint MFB</strong></div>
+                <div style="font-size:13px;color:var(--mu)">Account Number:</div>
+                <div style="font-size:22px;font-weight:900;color:var(--o);letter-spacing:.12em;margin:2px 0">6597789660</div>
+              </div>
+              <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);font-size:12px;color:rgba(255,255,255,.35)">
+                Use your <strong style="color:rgba(255,255,255,.55)">company name</strong> as the transfer reference.
+              </div>
+            </div>
+
+            <!-- Paystack -->
+            <div class="pay-card">
+              <div class="pay-card-label">💳 Pay Online via Paystack</div>
+              <div style="font-size:13px;color:var(--mu);margin-bottom:14px;line-height:1.6">Pay securely with card, bank transfer, or USSD — powered by Paystack.</div>
+              <a href="https://paystack.com/pay/peoplexats" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+                Pay with Paystack ↗
+              </a>
+              <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.35)">
+                Need an invoice or receipt? Email <strong style="color:rgba(255,255,255,.55)">billing@peoplex.africa</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="s-section">
+            <div class="s-section-title">Danger Zone</div>
+            <div class="s-section-sub">Irreversible actions for your workspace.</div>
+            <div class="danger-zone">
+              <div class="danger-title">Delete Workspace</div>
+              <div class="danger-desc">Permanently deletes this workspace, all jobs, candidates, and data. This cannot be undone.</div>
+              <button class="btn btn-danger btn-sm" onclick="handleDeleteWorkspace()">Delete Workspace</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /settings-content -->
+    </div><!-- /settings-wrap -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- INVITE MODAL -->
+<div class="overlay" id="invite-overlay" onclick="handleOC(event)">
+  <div class="modal">
+    <div class="modal-title">Invite Team Member</div>
+    <div class="field">
+      <label>Email Address *</label>
+      <input type="email" id="inv-email" placeholder="colleague@yourcompany.com">
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <select id="inv-role">
+        <option value="recruiter">Recruiter — can manage jobs and candidates</option>
+        <option value="interviewer">Interviewer — can view candidates and submit scorecards</option>
+        <option value="admin">Admin — full access</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeInvite()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="inv-btn" onclick="handleInvite()">
+        <span class="spinner" id="inv-spinner" style="display:none"></span>Send Invite
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const createClient = (typeof supabase !== 'undefined') ? supabase.createClient : () => null;
+const sb = createClient(
+  'https://fdkvbszbgjhkvybawxrf.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3Zic3piZ2poa3Z5YmF3eHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDM1NDUsImV4cCI6MjA4OTcxOTU0NX0.lc3QW3urgxJw1ucjkR4Buxw8OI034SI6vE1UoxOgYqM'
+);
+
+let currentUser = null, workspace = null, member = null, teamMembers = [], hires = [];
+
+const COLOR_PRESETS = ['#fe572a','#8cc74f','#3b82f6','#a78bfa','#f59e0b','#ef4444','#06b6d4','#ec4899'];
+
+const NGN_BANDS = [
+  { range: 'Under ₦200k/mo',     fee: '₦50,000',  color: 'var(--g)' },
+  { range: '₦200k – ₦500k/mo',  fee: '₦100,000', color: 'var(--o)' },
+  { range: '₦500k – ₦1m/mo',    fee: '₦200,000', color: 'var(--amber)' },
+  { range: 'Above ₦1m/mo',       fee: '₦400,000', color: '#f87171' },
+];
+const USD_BANDS = [
+  { range: 'Under $125/mo',      fee: '$30',  color: 'var(--g)' },
+  { range: '$125 – $312/mo',     fee: '$60',  color: 'var(--o)' },
+  { range: '$312 – $625/mo',     fee: '$120', color: 'var(--amber)' },
+  { range: 'Above $625/mo',      fee: '$250', color: '#f87171' },
+];
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  if (!sb) { showToast('Supabase not loaded', 'error'); return; }
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'peoplexats_auth.html'; return; }
+  currentUser = session.user;
+
+  const { data: mem } = await sb.from('team_members')
+    .select('*,workspaces(*)')
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+
+  if (!mem) { window.location.href = 'peoplexats_auth.html'; return; }
+  member = mem;
+  workspace = mem.workspaces;
+
+  // Populate sidebar
+  document.getElementById('ws-name').textContent = workspace.name;
+  const ini = (member.full_name || currentUser.email || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  document.getElementById('user-av').textContent = ini;
+  document.getElementById('user-name').textContent = member.full_name || currentUser.email;
+  document.getElementById('user-role').textContent = member.role || 'admin';
+
+  await Promise.all([loadTeam(), loadHires()]);
+  populateForm();
+  renderColorPresets();
+  renderFeeBands();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+async function loadTeam() {
+  const { data } = await sb.from('team_members').select('*').eq('workspace_id', workspace.id).order('joined_at');
+  teamMembers = data || [];
+  renderTeamTable();
+}
+
+async function loadHires() {
+  const { data } = await sb.from('hires').select('*').eq('workspace_id', workspace.id);
+  hires = data || [];
+  renderFeeSummary();
+}
+
+// ── POPULATE FORMS ────────────────────────────────────────────────────────────
+function populateForm() {
+  const ws = workspace;
+
+  // General
+  document.getElementById('g-name').value = ws.name || '';
+  document.getElementById('g-tagline').value = ws.tagline || '';
+  document.getElementById('g-industry').value = ws.industry || '';
+  document.getElementById('g-size').value = ws.size || '';
+  document.getElementById('g-country').value = ws.country || 'Nigeria';
+  document.getElementById('g-currency').value = ws.preferred_currency || 'NGN';
+  document.getElementById('g-website').value = ws.website || '';
+
+  // Brand colour
+  const color = ws.primary_color || '#fe572a';
+  document.getElementById('g-color').value = color;
+  document.getElementById('color-swatch').style.background = color;
+
+  // Logo
+  const logoEl = document.getElementById('logo-preview');
+  if (ws.logo_url) {
+    logoEl.innerHTML = `<img src="${ws.logo_url}" alt="Logo">`;
+  } else {
+    logoEl.textContent = (ws.name || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  }
+
+  // Careers
+  document.getElementById('c-slug').value = ws.careers_slug || '';
+  document.getElementById('slug-preview-val').textContent = ws.careers_slug || 'your-company';
+  document.getElementById('c-show-salary').checked = ws.show_salary !== false;
+  document.getElementById('c-accepting').checked = ws.accepting_applications !== false;
+
+  // Notifications
+  document.getElementById('n-app').checked    = ws.notify_wa_app    !== false;
+  document.getElementById('n-short').checked  = ws.notify_wa_short  !== false;
+  document.getElementById('n-reject').checked = ws.notify_wa_reject !== false;
+  document.getElementById('n-fee').checked    = ws.notify_fee_invoice !== false;
+  document.getElementById('n-new-app').checked = ws.notify_new_app  !== false;
+  document.getElementById('n-ai').checked     = ws.notify_ai_score  !== false;
+
+  // Integrations
+  const cvUrl    = ws.openclaw_api_url   || '';
+  const waUrl    = ws.openclaw_wa_url    || '';
+  const agentUrl = ws.openclaw_agent_url || '';
+  document.getElementById('i-cv-url').value    = cvUrl;
+  document.getElementById('i-wa-url').value    = waUrl;
+  document.getElementById('i-agent-url').value = agentUrl;
+  setIntBadge('badge-cv', cvUrl);
+  setIntBadge('badge-wa', waUrl);
+  setIntBadge('badge-agent', agentUrl);
+}
+
+function setIntBadge(id, val) {
+  const el = document.getElementById(id);
+  if (val) { el.textContent = 'Connected';      el.className = 'int-card-badge int-connected'; }
+  else      { el.textContent = 'Not configured'; el.className = 'int-card-badge int-disconnected'; }
+}
+
+// ── COLOR PRESETS ──────────────────────────────────────────────────────────────
+function renderColorPresets() {
+  const current = workspace.primary_color || '#fe572a';
+  document.getElementById('color-presets').innerHTML = COLOR_PRESETS.map(c =>
+    `<div class="color-preset ${c === current ? 'selected' : ''}" style="background:${c}" onclick="selectColor('${c}')"></div>`
+  ).join('');
+}
+
+function selectColor(color) {
+  document.getElementById('g-color').value = color;
+  document.getElementById('color-swatch').style.background = color;
+  document.querySelectorAll('.color-preset').forEach(el => {
+    el.classList.toggle('selected', el.getAttribute('onclick') === `selectColor('${color}')`);
+  });
+  saveWorkspaceField('primary_color', color);
+}
+
+function updateColorSwatch() {
+  const color = document.getElementById('g-color').value;
+  document.getElementById('color-swatch').style.background = color;
+  saveWorkspaceField('primary_color', color);
+}
+
+// ── GENERIC SAVE ──────────────────────────────────────────────────────────────
+async function saveWorkspaceField(field, value) {
+  const { error } = await sb.from('workspaces').update({ [field]: value }).eq('id', workspace.id);
+  if (error) showToast(error.message, 'error');
+  else { workspace[field] = value; showToast('Saved', 'success'); }
+}
+
+// Alias used by toggle handlers
+const saveField = saveWorkspaceField;
+
+// ── GENERAL SAVE ──────────────────────────────────────────────────────────────
+async function saveGeneral() {
+  const name = document.getElementById('g-name').value.trim();
+  if (!name) return showToast('Company name is required', 'error');
+
+  const btn = document.querySelector('#tab-general .btn-primary');
+  const spinner = document.getElementById('gen-spinner');
+  btn.disabled = true; spinner.style.display = 'inline-block';
+
+  const payload = {
+    name,
+    tagline:            document.getElementById('g-tagline').value.trim()   || null,
+    industry:           document.getElementById('g-industry').value          || null,
+    size:               document.getElementById('g-size').value              || null,
+    country:            document.getElementById('g-country').value,
+    preferred_currency: document.getElementById('g-currency').value,
+    website:            document.getElementById('g-website').value.trim()   || null,
+    primary_color:      document.getElementById('g-color').value,
+  };
+
+  const { error } = await sb.from('workspaces').update(payload).eq('id', workspace.id);
+  btn.disabled = false; spinner.style.display = 'none';
+
+  if (error) return showToast(error.message, 'error');
+  Object.assign(workspace, payload);
+  document.getElementById('ws-name').textContent = name;
+  showSaved('gen-saved');
+  showToast('Company profile saved!', 'success');
+}
+
+// ── SLUG ──────────────────────────────────────────────────────────────────────
+async function saveSlug() {
+  const slug = document.getElementById('c-slug').value.trim();
+  if (!slug || slug.length < 2) return showToast('Slug must be at least 2 characters', 'error');
+
+  const { data: existing } = await sb.from('workspaces').select('id')
+    .eq('careers_slug', slug).neq('id', workspace.id).maybeSingle();
+  if (existing) return showToast('This URL is already taken', 'error');
+
+  const { error } = await sb.from('workspaces').update({ careers_slug: slug }).eq('id', workspace.id);
+  if (error) return showToast(error.message, 'error');
+  workspace.careers_slug = slug;
+  showToast('Careers page URL updated!', 'success');
+}
+
+function onSlugInput() {
+  const clean = document.getElementById('c-slug').value.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+  document.getElementById('c-slug').value = clean;
+  document.getElementById('slug-preview-val').textContent = clean || 'your-company';
+}
+
+// ── INTEGRATIONS SAVE ─────────────────────────────────────────────────────────
+async function saveIntegrations() {
+  const cvUrl    = document.getElementById('i-cv-url').value.trim();
+  const waUrl    = document.getElementById('i-wa-url').value.trim();
+  const agentUrl = document.getElementById('i-agent-url').value.trim();
+
+  const btn = document.getElementById('int-spinner').closest('button');
+  const spinner = document.getElementById('int-spinner');
+  btn.disabled = true; spinner.style.display = 'inline-block';
+
+  const { error } = await sb.from('workspaces').update({
+    openclaw_api_url:   cvUrl    || null,
+    openclaw_wa_url:    waUrl    || null,
+    openclaw_agent_url: agentUrl || null,
+  }).eq('id', workspace.id);
+
+  btn.disabled = false; spinner.style.display = 'none';
+  if (error) return showToast(error.message, 'error');
+
+  workspace.openclaw_api_url   = cvUrl;
+  workspace.openclaw_wa_url    = waUrl;
+  workspace.openclaw_agent_url = agentUrl;
+  setIntBadge('badge-cv', cvUrl);
+  setIntBadge('badge-wa', waUrl);
+  setIntBadge('badge-agent', agentUrl);
+  showSaved('int-saved');
+  showToast('Integration URLs saved!', 'success');
+}
+
+async function testIntegrations() {
+  const cvUrl = document.getElementById('i-cv-url').value.trim();
+  const waUrl = document.getElementById('i-wa-url').value.trim();
+  if (!cvUrl && !waUrl) return showToast('No URLs configured yet', 'info');
+  showToast('Testing connections…', 'info');
+  const results = [];
+  for (const [label, url] of [['CV', cvUrl], ['WhatsApp', waUrl]]) {
+    if (!url) continue;
+    try {
+      const r = await fetch(url + '/health', { method: 'GET', signal: AbortSignal.timeout(5000) });
+      results.push(`${label}: ${r.ok ? '✓ OK' : '✗ ' + r.status}`);
+    } catch { results.push(`${label}: ✗ unreachable`); }
+  }
+  if (results.length) showToast(results.join(' | '), 'info');
+}
+
+// ── LOGO UPLOAD ───────────────────────────────────────────────────────────────
+async function handleLogoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) return showToast('Logo must be under 2MB', 'error');
+  const ext  = file.name.split('.').pop();
+  const path = `${workspace.id}/logo.${ext}`;
+  const { error } = await sb.storage.from('logos').upload(path, file, { contentType: file.type, upsert: true });
+  if (error) return showToast(error.message, 'error');
+  const { data: urlData } = sb.storage.from('logos').getPublicUrl(path);
+  const logoUrl = urlData.publicUrl;
+  await saveWorkspaceField('logo_url', logoUrl);
+  document.getElementById('logo-preview').innerHTML = `<img src="${logoUrl}?t=${Date.now()}" alt="Logo">`;
+  showToast('Logo uploaded!', 'success');
+}
+
+// ── TEAM ──────────────────────────────────────────────────────────────────────
+function renderTeamTable() {
+  const wrap = document.getElementById('team-table-wrap');
+  if (!teamMembers.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--mu);padding:8px 0">No team members yet.</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="team-table">
+    <thead><tr><th></th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+    <tbody>
+      ${teamMembers.map(m => {
+        const ini = (m.full_name || m.email || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+        return `<tr>
+          <td><div class="team-av">${esc(ini)}</div></td>
+          <td style="font-weight:600;color:var(--w)">${esc(m.full_name || '—')}</td>
+          <td style="color:var(--mu)">${esc(m.email || '—')}</td>
+          <td><span class="role-badge role-${m.role}">${m.role}</span></td>
+          <td><span class="status-dot ${m.status === 'active' ? 'status-active' : 'status-pending'}"></span><span style="font-size:12px;color:var(--mu)">${m.status}</span></td>
+          <td style="font-size:12px;color:var(--mu)">${fmtDate(m.joined_at)}</td>
+          <td>${m.id !== member.id ? `
+            <select class="btn btn-ghost btn-sm" style="cursor:pointer;padding:4px 8px;font-size:11px" onchange="updateMemberRole('${m.id}',this.value)">
+              <option value="recruiter"   ${m.role === 'recruiter'   ? 'selected' : ''}>Recruiter</option>
+              <option value="interviewer" ${m.role === 'interviewer' ? 'selected' : ''}>Interviewer</option>
+              <option value="admin"       ${m.role === 'admin'       ? 'selected' : ''}>Admin</option>
+            </select>
+            <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="removeMember('${m.id}')">Remove</button>
+          ` : '<span style="font-size:11px;color:var(--mu)">You</span>'}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function updateMemberRole(memberId, newRole) {
+  const { error } = await sb.from('team_members').update({ role: newRole }).eq('id', memberId);
+  if (error) return showToast(error.message, 'error');
+  showToast('Role updated', 'success');
+  await loadTeam();
+}
+
+async function removeMember(memberId) {
+  if (!confirm('Remove this team member? They will lose access immediately.')) return;
+  const { error } = await sb.from('team_members').delete().eq('id', memberId);
+  if (error) return showToast(error.message, 'error');
+  showToast('Member removed', 'success');
+  await loadTeam();
+}
+
+function openInviteModal() { document.getElementById('invite-overlay').classList.add('open'); }
+function closeInvite()     { document.getElementById('invite-overlay').classList.remove('open'); }
+function handleOC(e)       { if (e.target === document.getElementById('invite-overlay')) closeInvite(); }
+
+async function handleInvite() {
+  const email = document.getElementById('inv-email').value.trim();
+  const role  = document.getElementById('inv-role').value;
+  if (!email || !email.includes('@')) return showToast('Enter a valid email address', 'error');
+
+  const btn     = document.getElementById('inv-btn');
+  const spinner = document.getElementById('inv-spinner');
+  btn.disabled = true; spinner.style.display = 'inline-block';
+
+  const { error } = await sb.from('team_members').insert({
+    workspace_id: workspace.id,
+    email,
+    role,
+    status:      'pending',
+    invited_by:  member.id,
+    invited_at:  new Date().toISOString(),
+  });
+
+  btn.disabled = false; spinner.style.display = 'none';
+  if (error) return showToast(error.message, 'error');
+
+  showToast('Invite sent to ' + email, 'success');
+  closeInvite();
+  document.getElementById('inv-email').value = '';
+  await loadTeam();
+}
+
+// ── FEE BANDS ─────────────────────────────────────────────────────────────────
+function renderFeeBands() {
+  const isNG  = (workspace.country || 'Nigeria') === 'Nigeria';
+  const bands = isNG ? NGN_BANDS : USD_BANDS;
+  document.getElementById('fee-band-display').innerHTML = `
+    <table class="fee-table">
+      <thead><tr><th>Monthly Salary Range</th><th>One-time Success Fee</th></tr></thead>
+      <tbody>
+        ${bands.map(b => `<tr>
+          <td>${b.range}</td>
+          <td style="font-weight:800;color:${b.color};font-size:15px">${b.fee}</td>
+        </tr>`).join('')}
+        <tr style="background:var(--gd)">
+          <td style="color:var(--g);font-weight:600">Your first hire ever</td>
+          <td style="font-weight:800;color:var(--g);font-size:15px">FREE 🎉</td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
+function renderFeeSummary() {
+  const paid     = hires.filter(h => h.fee_status === 'paid').reduce((s, h) => s + (h.success_fee_ngn || 0), 0);
+  const pending  = hires.filter(h => h.fee_status === 'pending').reduce((s, h) => s + (h.success_fee_ngn || 0), 0);
+  const invoiced = hires.filter(h => h.fee_status === 'invoiced').reduce((s, h) => s + (h.success_fee_ngn || 0), 0);
+  const waived   = hires.filter(h => h.fee_status === 'waived').length;
+  document.getElementById('fee-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      ${[
+        ['Total Hires',           hires.length,                        'var(--w)'],
+        ['Fees Waived',           waived + ' hire' + (waived !== 1 ? 's' : ''), 'var(--g)'],
+        ['Fees Paid',             '₦' + paid.toLocaleString(),          'var(--g)'],
+        ['Pending + Invoiced',    '₦' + (pending + invoiced).toLocaleString(), 'var(--amber)'],
+      ].map(([l, v, c]) => `<div style="background:var(--ink3);border:1px solid var(--bd);border-radius:9px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mu);margin-bottom:4px">${l}</div>
+        <div style="font-size:18px;font-weight:800;color:${c}">${v}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+async function handleDeleteWorkspace() {
+  const confirmed = prompt('Type your company name to confirm deletion:');
+  if (confirmed !== workspace.name) return showToast('Company name did not match', 'error');
+  showToast('Deleting workspace…', 'info');
+  await sb.from('workspaces').delete().eq('id', workspace.id);
+  await sb.auth.signOut();
+  window.location.href = 'peoplexats_auth.html';
+}
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.snav-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function showSaved(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function esc(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3800);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
