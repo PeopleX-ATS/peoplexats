@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PeopleX — Set Up Your Workspace</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --o:#fe572a;--od:rgba(254,87,42,0.13);--og:rgba(254,87,42,0.35);
+  --g:#8cc74f;--gd:rgba(140,199,79,0.12);
+  --ink:#080706;--ink2:#111009;--ink3:#1a1814;
+  --w:#fff;--mu:rgba(255,255,255,0.42);
+  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.12);
+  --err:#f87171;--errd:rgba(248,113,113,0.12);
+  --ez:cubic-bezier(0.16,1,0.3,1);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:system-ui,sans-serif;background:var(--ink);color:var(--w);-webkit-font-smoothing:antialiased}
+
+/* Background grain */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+
+/* Orange glow blob */
+body::after{content:'';position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(254,87,42,0.12) 0%,transparent 70%);top:-100px;right:-100px;pointer-events:none;z-index:0}
+
+#wrap{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
+
+/* LEFT PANEL */
+.left{width:380px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--bd2);display:flex;flex-direction:column;padding:40px 36px;overflow-y:auto}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:48px}
+.logo-mark{width:32px;height:32px;background:var(--o);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}
+.logo-text{font-size:18px;font-weight:800;letter-spacing:-.02em}
+
+.steps{display:flex;flex-direction:column;gap:4px;flex:1}
+.step{display:flex;align-items:flex-start;gap:14px;padding:14px 12px;border-radius:10px;transition:background .2s}
+.step.active{background:var(--od)}
+.step-num{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--mu);flex-shrink:0;transition:all .2s}
+.step.active .step-num{background:var(--o);border-color:var(--o);color:#fff}
+.step.done .step-num{background:var(--g);border-color:var(--g);color:#fff}
+.step.done .step-num::after{content:'✓'}
+.step.done .step-num span{display:none}
+.step-info{min-width:0}
+.step-title{font-size:13px;font-weight:700;color:var(--mu);transition:color .2s}
+.step.active .step-title,.step.done .step-title{color:var(--w)}
+.step-desc{font-size:12px;color:rgba(255,255,255,.28);line-height:1.5;margin-top:2px}
+
+.left-bottom{margin-top:auto;padding-top:24px;border-top:1px solid var(--bd);font-size:12px;color:var(--mu);line-height:1.6}
+.left-bottom strong{color:var(--w)}
+
+/* RIGHT PANEL */
+.right{flex:1;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:40px 24px}
+.card{width:100%;max-width:480px}
+
+.card-title{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--w);margin-bottom:6px}
+.card-sub{font-size:14px;color:var(--mu);margin-bottom:32px;line-height:1.6}
+
+/* Steps content */
+.step-content{display:none}
+.step-content.active{display:block;animation:fadeUp .35s var(--ez)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Fields */
+.field{margin-bottom:18px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:7px}
+.field input,.field select{width:100%;background:var(--ink3);border:1.5px solid var(--bd2);color:var(--w);font-family:system-ui,sans-serif;font-size:14px;padding:11px 14px;border-radius:9px;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.35)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;cursor:pointer}
+.field input::placeholder{color:rgba(255,255,255,.2)}
+.field input:focus,.field select:focus{border-color:var(--o);box-shadow:0 0 0 3px var(--od)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field-hint{font-size:12px;color:var(--mu);margin-top:6px;line-height:1.5}
+
+/* Slug preview */
+.slug-row{display:flex;align-items:center;background:var(--ink3);border:1.5px solid var(--bd2);border-radius:9px;overflow:hidden;margin-top:7px;transition:border-color .2s,box-shadow .2s}
+.slug-row:focus-within{border-color:var(--o);box-shadow:0 0 0 3px var(--od)}
+.slug-base{padding:11px 0 11px 14px;font-size:13px;color:rgba(255,255,255,.3);white-space:nowrap;flex-shrink:0}
+.slug-input{flex:1;background:none;border:none;color:var(--o);font-size:14px;font-weight:600;font-family:system-ui,sans-serif;padding:11px 14px 11px 3px;outline:none;min-width:0}
+.slug-input::placeholder{color:rgba(254,87,42,.3);font-weight:400}
+
+/* Error */
+.err-box{background:var(--errd);border:1px solid rgba(248,113,113,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--err);margin-bottom:16px;display:none}
+
+/* Buttons */
+.btn{font-family:system-ui,sans-serif;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;padding:12px 22px;width:100%}
+.btn-primary{background:var(--o);color:#fff;box-shadow:0 2px 12px rgba(254,87,42,.3)}
+.btn-primary:hover:not(:disabled){background:#ff6a40;transform:translateY(-1px);box-shadow:0 4px 18px rgba(254,87,42,.4)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:none;color:var(--mu);border:1.5px solid var(--bd2);margin-top:10px}
+.btn-ghost:hover{color:var(--w);border-color:rgba(255,255,255,.25)}
+.btn-row{display:flex;flex-direction:column;gap:0;margin-top:8px}
+
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Progress bar */
+.progress{height:3px;background:var(--bd2);border-radius:2px;margin-bottom:28px;overflow:hidden}
+.progress-fill{height:100%;background:var(--o);border-radius:2px;transition:width .4s var(--ez)}
+
+/* Success state */
+.success-icon{width:64px;height:64px;background:var(--gd);border:1.5px solid rgba(140,199,79,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:20px}
+
+/* Loading overlay */
+#loading{position:fixed;inset:0;z-index:999;background:var(--ink);display:flex;align-items:center;justify-content:center}
+.big-spinner{width:36px;height:36px;border:3px solid rgba(254,87,42,.3);border-top-color:var(--o);border-radius:50%;animation:spin .8s linear infinite}
+
+/* Color swatches for brand */
+.color-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.color-dot{width:32px;height:32px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .15s;position:relative}
+.color-dot:hover{transform:scale(1.1)}
+.color-dot.selected::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700}
+.color-dot.selected{border-color:rgba(255,255,255,.6)}
+
+@media(max-width:768px){
+  #wrap{flex-direction:column}
+  .left{width:100%;border-right:none;border-bottom:1px solid var(--bd2);padding:20px 20px 16px;flex-direction:row;align-items:center;gap:16px}
+  .steps{flex-direction:row;flex:none;gap:8px}
+  .step{padding:8px 10px;flex-direction:column;align-items:center;text-align:center}
+  .step-desc{display:none}
+  .logo{margin-bottom:0}
+  .left-bottom{display:none}
+  .right{align-items:flex-start;padding:24px 20px}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="big-spinner"></div></div>
+
+<div id="wrap" style="display:none">
+  <!-- LEFT: steps panel -->
+  <div class="left">
+    <div class="logo">
+      <div class="logo-mark">P</div>
+      <span class="logo-text">PeopleX</span>
+    </div>
+
+    <div class="steps">
+      <div class="step active" id="s1">
+        <div class="step-num"><span>1</span></div>
+        <div class="step-info">
+          <div class="step-title">Your Details</div>
+          <div class="step-desc">Name and account info</div>
+        </div>
+      </div>
+      <div class="step" id="s2">
+        <div class="step-num"><span>2</span></div>
+        <div class="step-info">
+          <div class="step-title">Company Setup</div>
+          <div class="step-desc">Name, size, industry</div>
+        </div>
+      </div>
+      <div class="step" id="s3">
+        <div class="step-num"><span>3</span></div>
+        <div class="step-info">
+          <div class="step-title">Careers Page</div>
+          <div class="step-desc">Your public URL</div>
+        </div>
+      </div>
+      <div class="step" id="s4">
+        <div class="step-num"><span>4</span></div>
+        <div class="step-info">
+          <div class="step-title">All Done!</div>
+          <div class="step-desc">Enter your workspace</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="left-bottom">
+      <strong>Free forever</strong> for your first hire.<br>
+      One-time success fee only when you make a hire.<br><br>
+      Need help? <strong>hello@peoplex.africa</strong>
+    </div>
+  </div>
+
+  <!-- RIGHT: form panel -->
+  <div class="right">
+    <div class="card">
+
+      <!-- Step 1: Your details -->
+      <div class="step-content active" id="sc1">
+        <div class="progress"><div class="progress-fill" style="width:25%"></div></div>
+        <div class="card-title">Welcome to PeopleX 👋</div>
+        <div class="card-sub">Let's get your account set up. This takes about 2 minutes.</div>
+        <div id="err1" class="err-box"></div>
+        <div class="field">
+          <label>Full Name *</label>
+          <input type="text" id="f-name" placeholder="Ada Okafor" autocomplete="name">
+        </div>
+        <div class="field">
+          <label>Your Role at the Company</label>
+          <select id="f-role">
+            <option value="admin">Admin / Owner</option>
+            <option value="recruiter">Recruiter / HR Manager</option>
+            <option value="interviewer">Interviewer / Hiring Manager</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="step1Next()">Continue →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Company setup -->
+      <div class="step-content" id="sc2">
+        <div class="progress"><div class="progress-fill" style="width:50%"></div></div>
+        <div class="card-title">Tell us about your company</div>
+        <div class="card-sub">This appears on your careers page and candidate communications.</div>
+        <div id="err2" class="err-box"></div>
+        <div class="field">
+          <label>Company Name *</label>
+          <input type="text" id="f-company" placeholder="Acme Technologies Ltd" oninput="autoSlug()">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Industry</label>
+            <select id="f-industry">
+              <option value="">Select…</option>
+              <option>Technology</option>
+              <option>Finance &amp; Fintech</option>
+              <option>Healthcare</option>
+              <option>E-commerce &amp; Retail</option>
+              <option>Media &amp; Entertainment</option>
+              <option>Education &amp; EdTech</option>
+              <option>Logistics &amp; Supply Chain</option>
+              <option>Agriculture &amp; AgriTech</option>
+              <option>Energy &amp; Utilities</option>
+              <option>Real Estate &amp; PropTech</option>
+              <option>Professional Services</option>
+              <option>NGO / Non-Profit</option>
+              <option>Government</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Company Size</label>
+            <select id="f-size">
+              <option value="">Select…</option>
+              <option>1–10</option>
+              <option>11–50</option>
+              <option>51–200</option>
+              <option>200+</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Country</label>
+            <select id="f-country">
+              <option value="Nigeria">Nigeria 🇳🇬</option>
+              <option value="Kenya">Kenya 🇰🇪</option>
+              <option value="Ghana">Ghana 🇬🇭</option>
+              <option value="South Africa">South Africa 🇿🇦</option>
+              <option value="Rwanda">Rwanda 🇷🇼</option>
+              <option value="Uganda">Uganda 🇺🇬</option>
+              <option value="Tanzania">Tanzania 🇹🇿</option>
+              <option value="Egypt">Egypt 🇪🇬</option>
+              <option value="Other">Other 🌍</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Currency</label>
+            <select id="f-currency">
+              <option value="NGN">₦ NGN</option>
+              <option value="USD">$ USD</option>
+              <option value="KES">KES</option>
+              <option value="GHS">GHS</option>
+              <option value="ZAR">ZAR</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Brand Colour</label>
+          <div class="color-grid" id="color-grid"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="step2Next()">Continue →</button>
+          <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Careers page URL -->
+      <div class="step-content" id="sc3">
+        <div class="progress"><div class="progress-fill" style="width:75%"></div></div>
+        <div class="card-title">Your careers page URL</div>
+        <div class="card-sub">This is the public link you share with candidates. You can change it later in Settings.</div>
+        <div id="err3" class="err-box"></div>
+        <div class="field">
+          <label>URL Slug *</label>
+          <div class="slug-row">
+            <span class="slug-base">ats.peoplex.africa/careers/</span>
+            <input class="slug-input" type="text" id="f-slug" placeholder="your-company" oninput="cleanSlug()">
+          </div>
+          <div class="field-hint">Only lowercase letters, numbers, and hyphens. No spaces.</div>
+        </div>
+        <div class="field">
+          <label>Company Website <span style="color:var(--mu);font-weight:400;text-transform:none">(optional)</span></label>
+          <input type="url" id="f-website" placeholder="https://yourcompany.com">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="finish-btn" onclick="finish()">
+            <span id="finish-label">Create My Workspace 🚀</span>
+            <span class="spinner" id="finish-spinner" style="display:none"></span>
+          </button>
+          <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Success -->
+      <div class="step-content" id="sc4">
+        <div class="progress"><div class="progress-fill" style="width:100%"></div></div>
+        <div class="success-icon">🎉</div>
+        <div class="card-title">You're all set!</div>
+        <div class="card-sub" id="success-msg">Your PeopleX workspace is ready. Time to post your first job and find great people.</div>
+        <div class="btn-row" style="margin-top:24px">
+          <button class="btn btn-primary" onclick="enterDashboard()">Enter Dashboard →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const sb = supabase.createClient(
+  'https://fdkvbszbgjhkvybawxrf.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3Zic3piZ2poa3Z5YmF3eHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDM1NDUsImV4cCI6MjA4OTcxOTU0NX0.lc3QW3urgxJw1ucjkR4Buxw8OI034SI6vE1UoxOgYqM'
+);
+
+const COLORS = ['#fe572a','#8cc74f','#3b82f6','#a78bfa','#f59e0b','#ef4444','#06b6d4','#ec4899','#14b8a6','#f97316'];
+let selectedColor = '#fe572a';
+let currentUser = null;
+let currentStep = 1;
+let createdWorkspaceId = null;
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+
+  if (!session) {
+    window.location.href = 'peoplexats_auth.html';
+    return;
+  }
+  currentUser = session.user;
+
+  // Check if workspace already exists for this user
+  const { data: existing } = await sb.from('team_members')
+    .select('id, workspaces(id)')
+    .eq('user_id', currentUser.id)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (existing?.workspaces?.id) {
+    // Already onboarded — go straight to dashboard
+    window.location.href = 'peoplexats_dashboard.html';
+    return;
+  }
+
+  // Pre-fill email if available
+  if (currentUser.email) {
+    const nameGuess = currentUser.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    document.getElementById('f-name').value = nameGuess;
+  }
+
+  renderColors();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('wrap').style.display = 'flex';
+}
+
+// ── COLOR PICKER ──────────────────────────────────────────────────────────────
+function renderColors() {
+  const grid = document.getElementById('color-grid');
+  grid.innerHTML = COLORS.map(c => `
+    <div class="color-dot ${c === selectedColor ? 'selected' : ''}"
+         style="background:${c}"
+         onclick="pickColor('${c}')"></div>
+  `).join('');
+}
+
+function pickColor(c) {
+  selectedColor = c;
+  renderColors();
+}
+
+// ── AUTO SLUG ──────────────────────────────────────────────────────────────────
+function autoSlug() {
+  const company = document.getElementById('f-company').value;
+  const slug = company.toLowerCase().trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .substring(0, 40);
+  document.getElementById('f-slug').value = slug;
+}
+
+function cleanSlug() {
+  const el = document.getElementById('f-slug');
+  el.value = el.value.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+}
+
+// ── STEP NAVIGATION ───────────────────────────────────────────────────────────
+function goStep(n) {
+  // Update sidebar steps
+  for (let i = 1; i <= 4; i++) {
+    const s = document.getElementById('s'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    if (i === n) s.classList.add('active');
+  }
+  // Update content
+  document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+  document.getElementById('sc'+n).classList.add('active');
+  currentStep = n;
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearErr(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+// ── STEP 1 ───────────────────────────────────────────────────────────────────
+function step1Next() {
+  clearErr('err1');
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return showErr('err1', 'Please enter your full name.');
+  goStep(2);
+}
+
+// ── STEP 2 ───────────────────────────────────────────────────────────────────
+function step2Next() {
+  clearErr('err2');
+  const company = document.getElementById('f-company').value.trim();
+  if (!company) return showErr('err2', 'Please enter your company name.');
+  goStep(3);
+}
+
+// ── STEP 3 + FINISH ───────────────────────────────────────────────────────────
+async function finish() {
+  clearErr('err3');
+
+  const slug = document.getElementById('f-slug').value.trim();
+  if (!slug || slug.length < 2) return showErr('err3', 'Please enter a URL slug (at least 2 characters).');
+  if (!/^[a-z0-9-]+$/.test(slug)) return showErr('err3', 'Slug can only contain lowercase letters, numbers, and hyphens.');
+
+  const btn = document.getElementById('finish-btn');
+  const label = document.getElementById('finish-label');
+  const spinner = document.getElementById('finish-spinner');
+  btn.disabled = true;
+  label.style.display = 'none';
+  spinner.style.display = 'inline-block';
+
+  try {
+    // 1. Check slug uniqueness
+    const { data: slugTaken } = await sb.from('workspaces')
+      .select('id')
+      .eq('careers_slug', slug)
+      .maybeSingle();
+
+    if (slugTaken) {
+      showErr('err3', 'That URL is already taken. Please choose another.');
+      return;
+    }
+
+    const company   = document.getElementById('f-company').value.trim();
+    const industry  = document.getElementById('f-industry').value;
+    const size      = document.getElementById('f-size').value;
+    const country   = document.getElementById('f-country').value;
+    const currency  = document.getElementById('f-currency').value;
+    const website   = document.getElementById('f-website').value.trim() || null;
+    const fullName  = document.getElementById('f-name').value.trim();
+    const role      = document.getElementById('f-role').value;
+
+    // 2. Create workspace
+    const { data: ws, error: wsErr } = await sb.from('workspaces').insert({
+      name: company,
+      careers_slug: slug,
+      industry: industry || null,
+      size: size || null,
+      country,
+      preferred_currency: currency,
+      primary_color: selectedColor,
+      website,
+      owner_id: currentUser.id,
+    }).select().single();
+
+    if (wsErr) throw wsErr;
+    createdWorkspaceId = ws.id;
+
+    // 3. Create team_member record
+    const { error: tmErr } = await sb.from('team_members').insert({
+      workspace_id: ws.id,
+      user_id: currentUser.id,
+      full_name: fullName,
+      email: currentUser.email,
+      role,
+      status: 'active',
+      joined_at: new Date().toISOString(),
+    });
+
+    if (tmErr) throw tmErr;
+
+    // 4. Success!
+    document.getElementById('success-msg').textContent =
+      `Your PeopleX workspace "${company}" is ready at ats.peoplex.africa/careers/${slug}. Time to post your first job!`;
+    goStep(4);
+
+  } catch(e) {
+    showErr('err3', e.message || 'Something went wrong. Please try again.');
+  } finally {
+    btn.disabled = false;
+    label.style.display = 'inline';
+    spinner.style.display = 'none';
+  }
+}
+
+function enterDashboard() {
+  window.location.href = 'peoplexats_dashboard.html';
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
