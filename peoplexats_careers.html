@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Careers</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --o:#fe572a;--od:rgba(254,87,42,0.12);--og:rgba(254,87,42,0.3);
+  --g:#8cc74f;--gd:rgba(140,199,79,0.1);
+  --ink:#080706;--ink2:#111009;--ink3:#1a1814;
+  --w:#fff;--mu:rgba(255,255,255,0.42);--mu2:rgba(255,255,255,0.18);
+  --bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);
+  --err:#f87171;--errd:rgba(248,113,113,0.1);
+  --f:system-ui,-apple-system,sans-serif;
+  --ez:cubic-bezier(0.16,1,0.3,1);
+}
+body{font-family:var(--f);background:var(--ink);color:var(--w);-webkit-font-smoothing:antialiased;min-height:100vh}
+/* HEADER */
+.header{padding:18px 28px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--ink);z-index:10}
+.header-logo{font-size:18px;font-weight:800;color:var(--w);display:flex;align-items:center;gap:10px;text-decoration:none}
+.header-company{font-size:14px;color:var(--mu)}
+/* HERO */
+.hero{padding:60px 28px 40px;text-align:center;max-width:640px;margin:0 auto}
+.hero h1{font-size:36px;font-weight:800;letter-spacing:-.03em;margin-bottom:12px;line-height:1.15}
+.hero h1 span{color:var(--o)}
+.hero p{font-size:16px;color:var(--mu);line-height:1.7}
+/* JOB LIST */
+.jobs-section{max-width:780px;margin:0 auto;padding:0 28px 60px}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu2);margin-bottom:16px}
+.job-card{background:var(--ink2);border:1px solid var(--bd);border-radius:12px;padding:22px 24px;margin-bottom:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.job-card:hover{border-color:var(--bd2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.job-info{flex:1;min-width:0}
+.job-title{font-size:16px;font-weight:700;color:var(--w);margin-bottom:6px}
+.job-tags{display:flex;gap:8px;flex-wrap:wrap}
+.job-tag{font-size:11px;color:var(--mu);background:rgba(255,255,255,.06);padding:3px 10px;border-radius:5px}
+.job-arrow{color:var(--o);font-size:20px;flex-shrink:0}
+.no-jobs{text-align:center;padding:60px 28px;color:var(--mu);font-size:14px;line-height:1.7}
+/* APPLICATION FORM */
+.form-wrap{max-width:600px;margin:0 auto;padding:40px 28px 80px}
+.back-btn{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--mu);text-decoration:none;margin-bottom:28px;transition:color .15s;cursor:pointer;background:none;border:none;font-family:var(--f)}
+.back-btn:hover{color:var(--w)}
+.form-title{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+.form-subtitle{font-size:14px;color:var(--mu);margin-bottom:32px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:6px}
+.field label .req{color:var(--o)}
+.field input,.field select,.field textarea{width:100%;background:var(--ink2);border:1.5px solid var(--bd2);color:var(--w);font-family:var(--f);font-size:14px;padding:11px 14px;border-radius:9px;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.25)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--o);box-shadow:0 0 0 3px var(--od)}
+.field select option{background:var(--ink2)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cv-upload{border:2px dashed var(--bd2);border-radius:9px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.cv-upload:hover,.cv-upload.drag-over{border-color:var(--o);background:var(--od)}
+.cv-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.cv-upload-ico{font-size:28px;margin-bottom:8px}
+.cv-upload-label{font-size:13px;color:var(--mu);line-height:1.5}
+.cv-upload-label strong{color:var(--w)}
+.cv-selected{font-size:12px;color:var(--g);margin-top:6px;font-weight:600}
+.screening-section{background:var(--ink2);border:1px solid var(--bd2);border-radius:10px;padding:18px 20px;margin-bottom:18px}
+.screening-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mu2);margin-bottom:14px}
+.screening-q{margin-bottom:14px}
+.screening-q:last-child{margin-bottom:0}
+.screening-q label{font-size:13px;color:var(--mu);margin-bottom:6px;display:block;line-height:1.4}
+.screening-q textarea{width:100%;background:var(--ink3);border:1.5px solid var(--bd2);color:var(--w);font-family:var(--f);font-size:13px;padding:9px 12px;border-radius:7px;outline:none;resize:vertical;min-height:60px;line-height:1.5;transition:border-color .2s}
+.screening-q textarea:focus{border-color:var(--o)}
+.consent-wrap{display:flex;gap:12px;align-items:flex-start;padding:14px;background:var(--ink2);border:1px solid var(--bd2);border-radius:9px;margin-bottom:24px}
+.consent-wrap input[type=checkbox]{margin-top:2px;accent-color:var(--o);width:16px;height:16px;flex-shrink:0;cursor:pointer}
+.consent-wrap label{font-size:12px;color:var(--mu);line-height:1.6;cursor:pointer}
+.consent-wrap a{color:var(--o);text-decoration:none}
+.submit-btn{width:100%;background:var(--o);color:#fff;font-family:var(--f);font-size:15px;font-weight:700;border:none;border-radius:10px;padding:14px;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px var(--og);display:flex;align-items:center;justify-content:center;gap:8px}
+.submit-btn:hover{background:#ff6a40;transform:translateY(-1px)}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* SUCCESS */
+.success-wrap{max-width:520px;margin:80px auto;text-align:center;padding:0 28px}
+.success-ico{font-size:56px;margin-bottom:20px}
+.success-wrap h2{font-size:26px;font-weight:800;margin-bottom:10px;letter-spacing:-.02em}
+.success-wrap p{font-size:15px;color:var(--mu);line-height:1.7;margin-bottom:24px}
+.success-back{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--o);text-decoration:none;font-weight:600}
+/* ERROR */
+.error-box{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--err);margin-bottom:16px;display:none}
+/* UPLOAD PROGRESS */
+.upload-bar-wrap{height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.upload-bar{height:100%;background:var(--o);border-radius:2px;transition:width .3s;width:0}
+/* NOT FOUND */
+.notfound{max-width:480px;margin:80px auto;text-align:center;padding:0 28px}
+@media(max-width:600px){.field-row{grid-template-columns:1fr}.hero h1{font-size:26px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="header-logo" id="header-logo" href="#">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 71.24 71.31" style="height:22px;width:22px"><path fill="#fe572a" d="M56.71,35.62A35.71,35.71,0,0,1,71.24,6.88,21.83,21.83,0,0,0,64.43,0,35.83,35.83,0,0,1,35.62,14.56,35.61,35.61,0,0,1,6.85,0,22,22,0,0,0,0,6.88,35.73,35.73,0,0,1,14.53,35.65,35.85,35.85,0,0,1,0,64.43a22,22,0,0,0,6.85,6.88,35.77,35.77,0,0,1,57.58,0,21.7,21.7,0,0,0,6.81-6.84A35.86,35.86,0,0,1,56.71,35.62ZM35.62,44.38a8.73,8.73,0,1,1,8.76-8.73A8.71,8.71,0,0,1,35.62,44.38Z"/></svg>
+    <span id="header-company">Loading…</span>
+  </a>
+  <div class="header-company" id="header-tagline"></div>
+</div>
+
+<div id="app"></div>
+
+<script>
+const SUPABASE_URL='https://fdkvbszbgjhkvybawxrf.supabase.co';
+const ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3Zic3piZ2poa3Z5YmF3eHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDM1NDUsImV4cCI6MjA4OTcxOTU0NX0.lc3QW3urgxJw1ucjkR4Buxw8OI034SI6vE1UoxOgYqM';
+const SB=supabase.createClient(SUPABASE_URL,ANON_KEY);
+
+let WS=null, currentJob=null, cvFile=null;
+const params=new URLSearchParams(location.search);
+const slug=params.get('workspace');
+const preselectedJobId=params.get('job');
+
+async function init(){
+  if(!slug){showNotFound('No workspace specified in URL.');return;}
+  const{data:ws}=await SB.from('workspaces').select('*').eq('careers_slug',slug).single();
+  if(!ws){showNotFound(`Workspace "${slug}" not found.`);return;}
+  WS=ws;
+  document.title=`${ws.name} — Careers`;
+  document.getElementById('header-company').textContent=ws.name;
+  document.getElementById('header-tagline').textContent=ws.tagline||'';
+
+  if(preselectedJobId){
+    const{data:job}=await SB.from('jobs').select('*').eq('id',preselectedJobId).eq('workspace_id',ws.id).eq('status','open').single();
+    if(job){showForm(job);return;}
+  }
+  showJobList();
+}
+
+async function showJobList(){
+  const{data:jobs}=await SB.from('jobs').select('*').eq('workspace_id',WS.id).eq('status','open').order('published_at',{ascending:false});
+  const typeMap={full_time:'Full-time',part_time:'Part-time',contract:'Contract',remote:'Remote',hybrid:'Hybrid'};
+  document.getElementById('app').innerHTML=`
+    <div class="hero">
+      <h1>Join <span>${esc(WS.name)}</span></h1>
+      <p>${esc(WS.tagline||"We're hiring talented people to join our team. Find a role that's right for you.")}</p>
+    </div>
+    <div class="jobs-section">
+      <div class="section-title">Open Positions — ${(jobs||[]).length} role${(jobs||[]).length!==1?'s':''}</div>
+      ${!(jobs&&jobs.length)?`<div class="no-jobs">🔍 No open positions right now.<br>Check back soon or follow us for updates.</div>`:
+        (jobs||[]).map(j=>`
+        <div class="job-card" onclick="showForm(${JSON.stringify(j).replace(/"/g,'&quot;')})">
+          <div class="job-info">
+            <div class="job-title">${esc(j.title)}</div>
+            <div class="job-tags">
+              ${j.department?`<span class="job-tag">🏢 ${esc(j.department)}</span>`:''}
+              ${j.location?`<span class="job-tag">📍 ${esc(j.location)}</span>`:''}
+              ${j.job_type?`<span class="job-tag">⏰ ${typeMap[j.job_type]||j.job_type}</span>`:''}
+              ${j.salary_min&&WS.show_salary!==false?`<span class="job-tag">💰 ${j.currency||'NGN'} ${fmtSal(j.salary_min)}${j.salary_max?' – '+fmtSal(j.salary_max):''}</span>`:''}
+            </div>
+          </div>
+          <div class="job-arrow">→</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function showForm(job){
+  currentJob=typeof job==='string'?JSON.parse(job):job;
+  const questions=Array.isArray(currentJob.screening_questions)?currentJob.screening_questions:[];
+  document.getElementById('app').innerHTML=`
+    <div class="form-wrap">
+      <button class="back-btn" onclick="showJobList()">← Back to all jobs</button>
+      <div class="form-title">${esc(currentJob.title)}</div>
+      <div class="form-subtitle">Apply at ${esc(WS.name)}${currentJob.location?' · '+esc(currentJob.location):''}</div>
+
+      ${currentJob.description?`<div style="background:var(--ink2);border:1px solid var(--bd2);border-radius:10px;padding:18px 20px;margin-bottom:24px;font-size:14px;color:rgba(255,255,255,.7);line-height:1.8;white-space:pre-wrap">${esc(currentJob.description)}</div>`:''}
+
+      <div class="error-box" id="error-box"></div>
+
+      <div class="field-row">
+        <div class="field"><label>First & Last Name <span class="req">*</span></label><input type="text" id="f-name" placeholder="Adaeze Okonkwo" autocomplete="name"></div>
+        <div class="field"><label>Email Address <span class="req">*</span></label><input type="email" id="f-email" placeholder="adaeze@example.com" autocomplete="email"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Phone Number</label><input type="tel" id="f-phone" placeholder="+234 801 234 5678" autocomplete="tel"></div>
+        <div class="field"><label>City / Location</label><input type="text" id="f-city" placeholder="Lagos, Nigeria"></div>
+      </div>
+      <div class="field"><label>NYSC Status</label>
+        <select id="f-nysc">
+          <option value="not_applicable">Not applicable</option>
+          <option value="completed">Completed</option>
+          <option value="ongoing">Ongoing</option>
+          <option value="exempted">Exempted</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>CV / Resume <span class="req">*</span></label>
+        <div class="cv-upload" id="cv-drop" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+          <input type="file" id="f-cv" accept=".pdf,.doc,.docx" onchange="handleFile(this.files[0])">
+          <div class="cv-upload-ico">📄</div>
+          <div class="cv-upload-label"><strong>Click to upload</strong> or drag and drop<br>PDF, DOC, DOCX — max 5MB</div>
+          <div class="cv-selected" id="cv-selected" style="display:none"></div>
+        </div>
+        <div class="upload-bar-wrap" id="upload-bar-wrap"><div class="upload-bar" id="upload-bar"></div></div>
+      </div>
+
+      ${questions.length?`<div class="screening-section">
+        <div class="screening-title">Screening Questions</div>
+        ${questions.map((q,i)=>`<div class="screening-q">
+          <label>${esc(q)}</label>
+          <textarea id="sq-${i}" placeholder="Your answer…" rows="2"></textarea>
+        </div>`).join('')}
+      </div>`:''}
+
+      <div class="consent-wrap">
+        <input type="checkbox" id="f-consent">
+        <label for="f-consent">I consent to PeopleX and ${esc(WS.name)} storing and processing my personal data for the purpose of this job application, in accordance with the <a href="#" target="_blank">NDPR</a> and applicable data protection laws. My data will not be shared with third parties without my consent.</label>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="submitApplication()">
+        <span id="submit-label">Submit Application</span>
+        <span class="spin" id="submit-spin" style="display:none"></span>
+      </button>
+    </div>`;
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('cv-drop').classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];
+  if(file)handleFile(file);
+}
+
+function handleFile(file){
+  if(!file)return;
+  if(file.size>5*1024*1024){showError('CV file must be under 5MB');return;}
+  const allowed=['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  if(!allowed.includes(file.type)){showError('Please upload a PDF or Word document');return;}
+  cvFile=file;
+  const sel=document.getElementById('cv-selected');
+  sel.textContent=`✓ ${file.name}`;
+  sel.style.display='block';
+}
+
+async function submitApplication(){
+  const name=document.getElementById('f-name').value.trim();
+  const email=document.getElementById('f-email').value.trim();
+  const consent=document.getElementById('f-consent').checked;
+  hideError();
+  if(!name){showError('Please enter your full name');return;}
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showError('Please enter a valid email address');return;}
+  if(!cvFile){showError('Please upload your CV or resume');return;}
+  if(!consent){showError('Please consent to data processing to continue');return;}
+
+  const btn=document.getElementById('submit-btn');
+  const lbl=document.getElementById('submit-label');
+  const spin=document.getElementById('submit-spin');
+  btn.disabled=true;lbl.style.display='none';spin.style.display='inline-block';
+
+  try{
+    // 1. Upload CV to Supabase Storage
+    const ext=cvFile.name.split('.').pop();
+    const path=`${WS.id}/${Date.now()}_${name.replace(/\s+/g,'-')}.${ext}`;
+    document.getElementById('upload-bar-wrap').style.display='block';
+    document.getElementById('upload-bar').style.width='30%';
+    const{data:uploadData,error:uploadErr}=await SB.storage.from('cvs').upload(path,cvFile,{cacheControl:'3600',upsert:false});
+    if(uploadErr)throw new Error('CV upload failed: '+uploadErr.message);
+    document.getElementById('upload-bar').style.width='60%';
+    const{data:{publicUrl}}=SB.storage.from('cvs').getPublicUrl(path);
+
+    // 2. Collect screening answers
+    const questions=Array.isArray(currentJob.screening_questions)?currentJob.screening_questions:[];
+    const answers={};
+    questions.forEach((q,i)=>{answers[i]=document.getElementById(`sq-${i}`)?.value.trim()||'';});
+
+    // 3. Insert candidate
+    const{data:cand,error:candErr}=await SB.from('candidates').insert({
+      job_id:currentJob.id,
+      workspace_id:WS.id,
+      full_name:name,
+      email,
+      phone:document.getElementById('f-phone').value.trim()||null,
+      city:document.getElementById('f-city').value.trim()||null,
+      nysc_status:document.getElementById('f-nysc').value,
+      cv_url:publicUrl,
+      cv_filename:cvFile.name,
+      screening_answers:answers,
+      source:'careers_page',
+      status:'new',
+      consent_given:true,
+      consent_given_at:new Date().toISOString(),
+    }).select().single();
+    if(candErr)throw new Error(candErr.message);
+    document.getElementById('upload-bar').style.width='80%';
+
+    // 4. Log activity
+    await SB.from('activity_log').insert({
+      candidate_id:cand.id,workspace_id:WS.id,
+      action:'new_application',
+      meta:{source:'careers_page',job_title:currentJob.title}
+    });
+
+    // 5. Increment job applicant count
+    await SB.from('jobs').update({applicant_count:(currentJob.applicant_count||0)+1}).eq('id',currentJob.id);
+
+    document.getElementById('upload-bar').style.width='90%';
+
+    // 6. Fire score-candidate edge function (fire-and-forget)
+    fetch(`${SUPABASE_URL}/functions/v1/score-candidate`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${ANON_KEY}`},
+      body:JSON.stringify({candidate_id:cand.id})
+    }).catch(()=>{});
+
+    // 7. Send confirmation email to candidate
+    fetch(`${SUPABASE_URL}/functions/v1/send-email`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${ANON_KEY}`},
+      body:JSON.stringify({
+        template:'application_received',
+        to:email,
+        data:{
+          candidate_id:cand.id,
+          workspace_id:WS.id,
+          name:name.split(' ')[0],
+          company:WS.name,
+          job:currentJob.title,
+        }
+      })
+    }).catch(()=>{});
+
+    // 8. Send WhatsApp notification if workspace has it configured
+    if(document.getElementById('f-phone').value.trim()){
+      fetch(`${SUPABASE_URL}/functions/v1/notify-candidate`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${ANON_KEY}`},
+        body:JSON.stringify({candidate_id:cand.id,template:'application_received'})
+      }).catch(()=>{});
+    }
+
+    document.getElementById('upload-bar').style.width='100%';
+    showSuccess(name,currentJob.title);
+
+  }catch(err){
+    btn.disabled=false;lbl.style.display='inline';spin.style.display='none';
+    showError(err.message||'Something went wrong. Please try again.');
+  }
+}
+
+function showSuccess(name,jobTitle){
+  document.getElementById('app').innerHTML=`
+    <div class="success-wrap">
+      <div class="success-ico">🎉</div>
+      <h2>Application Submitted!</h2>
+      <p>Thanks ${esc(name.split(' ')[0])}! Your application for <strong>${esc(jobTitle)}</strong> at <strong>${esc(WS.name)}</strong> has been received.<br><br>
+      Our AI is reviewing your CV now. You'll hear from us shortly via email. Good luck!</p>
+      <a class="success-back" href="?" onclick="event.preventDefault();location.href='?workspace=${slug}'">← View other openings</a>
+    </div>`;
+}
+
+function showNotFound(msg){
+  document.getElementById('app').innerHTML=`<div class="notfound"><div style="font-size:48px;margin-bottom:20px">🔍</div><h2 style="font-size:22px;font-weight:800;margin-bottom:10px">Page Not Found</h2><p style="color:var(--mu);line-height:1.7">${esc(msg)}</p></div>`;
+}
+
+function showError(msg){
+  const el=document.getElementById('error-box');
+  if(el){el.textContent=msg;el.style.display='block';el.scrollIntoView({behavior:'smooth',block:'center'});}
+}
+function hideError(){const el=document.getElementById('error-box');if(el)el.style.display='none';}
+
+function fmtSal(n){return n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?Math.round(n/1000)+'k':n;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+init();
+</script>
+</body>
+</html>
