@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PeopleX ATS — Interviews</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --o:#fe572a;--od:rgba(254,87,42,0.12);--og:rgba(254,87,42,0.3);
+  --g:#8cc74f;--gd:rgba(140,199,79,0.1);
+  --ink:#080706;--ink2:#111009;--ink3:#1a1814;--ink4:#211f1c;
+  --w:#fff;--mu:rgba(255,255,255,0.42);--mu2:rgba(255,255,255,0.18);
+  --bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);
+  --err:#f87171;--errd:rgba(248,113,113,0.1);
+  --f:system-ui,-apple-system,sans-serif;
+  --ez:cubic-bezier(0.16,1,0.3,1);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--f);background:var(--ink);color:var(--w);-webkit-font-smoothing:antialiased;display:flex}
+#loading{position:fixed;inset:0;z-index:999;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.big-spin{width:36px;height:36px;border:3px solid rgba(254,87,42,.3);border-top-color:var(--o);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:13px;color:var(--mu)}
+#sidebar{width:220px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow-y:auto}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;text-decoration:none}
+.sb-ws{padding:12px 14px;margin:10px 10px 4px;background:var(--ink3);border-radius:8px;border:1px solid var(--bd2)}
+.sb-ws-name{font-size:12px;font-weight:700;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-ws-role{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+.sb-section{padding:6px 10px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu2)}
+.sb-nav{padding:4px 10px;display:flex;flex-direction:column;gap:2px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:13px;font-weight:500;color:var(--mu);text-decoration:none;transition:all .15s;position:relative}
+.sb-link:hover{background:var(--ink3);color:var(--w)}
+.sb-link.active{background:var(--od);color:var(--o);font-weight:600}
+.sb-link.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--o);border-radius:0 2px 2px 0}
+.sb-link svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.sb-link.active svg{opacity:1}
+.sb-badge{margin-left:auto;background:var(--o);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;line-height:1.5}
+.sb-bottom{margin-top:auto;padding:12px 10px;border-top:1px solid var(--bd)}
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background .15s}
+.sb-user:hover{background:var(--ink3)}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--od);border:1px solid rgba(254,87,42,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--o);flex-shrink:0}
+.sb-uname{font-size:12px;font-weight:600;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-uemail{font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:56px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:700;color:var(--w)}
+.tb-btn{font-family:var(--f);font-size:12px;font-weight:600;border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 14px;transition:all .15s}
+.tb-btn-pri{background:var(--o);color:#fff;box-shadow:0 2px 8px var(--og)}
+.tb-btn-pri:hover{background:#ff6a40}
+.filter-bar{padding:10px 28px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.filter-tab{font-family:var(--f);font-size:12px;font-weight:600;background:none;border:1px solid var(--bd2);border-radius:6px;color:var(--mu);padding:5px 14px;cursor:pointer;transition:all .15s}
+.filter-tab:hover{color:var(--w)}
+.filter-tab.active{background:var(--od);border-color:rgba(254,87,42,.3);color:var(--o)}
+.filter-count{margin-left:auto;font-size:12px;color:var(--mu)}
+#content{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px}
+.date-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu2);margin-bottom:8px;padding-left:2px}
+.iv-card{background:var(--ink2);border:1px solid var(--bd);border-radius:12px;padding:16px 20px;display:flex;align-items:flex-start;gap:16px;transition:all .15s;margin-bottom:8px}
+.iv-card:hover{border-color:var(--bd2);background:var(--ink3)}
+.iv-card.completed{opacity:.65}
+.iv-card.cancelled,.iv-card.no_show{opacity:.45}
+.iv-time-block{flex-shrink:0;width:58px;text-align:center;background:var(--ink3);border-radius:8px;padding:8px 4px;border:1px solid var(--bd2)}
+.iv-date-n{font-size:22px;font-weight:800;color:var(--w);line-height:1}
+.iv-month{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+.iv-time{font-size:11px;color:var(--o);font-weight:700;margin-top:4px}
+.iv-info{flex:1;min-width:0}
+.iv-name{font-size:14px;font-weight:700;color:var(--w);margin-bottom:2px}
+.iv-job{font-size:12px;color:var(--mu);margin-bottom:8px}
+.iv-meta{display:flex;gap:10px;flex-wrap:wrap}
+.iv-tag{font-size:11px;color:var(--mu);display:flex;align-items:center;gap:4px}
+.iv-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.iv-status{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:5px}
+.iv-status.scheduled{color:var(--o);background:var(--od);border:1px solid rgba(254,87,42,.2)}
+.iv-status.completed{color:var(--g);background:var(--gd);border:1px solid rgba(140,199,79,.2)}
+.iv-status.cancelled,.iv-status.no_show{color:var(--mu);background:rgba(255,255,255,.05);border:1px solid var(--bd2)}
+.iv-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.iv-act{font-family:var(--f);font-size:11px;font-weight:600;border:1px solid var(--bd2);background:none;color:var(--mu);padding:4px 10px;border-radius:5px;cursor:pointer;transition:all .15s}
+.iv-act:hover{color:var(--w);border-color:rgba(255,255,255,.2)}
+.iv-act.green{color:var(--g);border-color:rgba(140,199,79,.25)}
+.iv-act.green:hover{background:var(--gd)}
+.iv-act.red{color:var(--err);border-color:rgba(248,113,113,.25)}
+.iv-act.red:hover{background:var(--errd)}
+.empty-full{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;gap:12px}
+.empty-full .ico{font-size:40px;opacity:.3}
+.empty-full h3{font-size:18px;font-weight:700;color:var(--w)}
+.empty-full p{font-size:14px;color:var(--mu);max-width:320px;line-height:1.7}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+.modal{background:var(--ink2);border:1px solid var(--bd2);border-radius:16px;width:100%;max-width:520px;animation:slideUp .3s var(--ez);margin:auto}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{padding:22px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:16px;font-weight:700;color:var(--w)}
+.modal-close{background:none;border:none;color:var(--mu);cursor:pointer;font-size:18px;padding:4px;border-radius:4px;line-height:1}
+.modal-close:hover{color:var(--w)}
+.modal-body{padding:18px 24px 24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:var(--ink3);border:1.5px solid var(--bd2);color:var(--w);font-family:var(--f);font-size:13px;padding:9px 12px;border-radius:8px;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.2)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--o);box-shadow:0 0 0 3px var(--od)}
+.field select option{background:var(--ink3)}
+.field textarea{resize:vertical;min-height:70px;line-height:1.6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--bd)}
+.btn{font-family:var(--f);font-size:13px;font-weight:600;border:none;border-radius:7px;padding:10px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-sec{background:var(--ink3);color:var(--mu);border:1px solid var(--bd2)}
+.btn-sec:hover{color:var(--w)}
+.btn-pri{background:var(--o);color:#fff}
+.btn-pri:hover{background:#ff6a40}
+.btn-pri:disabled{opacity:.5;cursor:not-allowed}
+.spin-sm{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+.score-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.score-label{font-size:13px;color:var(--w);flex:1}
+.score-stars{display:flex;gap:4px}
+.star{width:26px;height:26px;border-radius:5px;border:1px solid var(--bd2);background:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;transition:all .15s;color:var(--mu)}
+.star.on{background:var(--od);border-color:rgba(254,87,42,.3);color:var(--o)}
+.star:hover{background:rgba(254,87,42,.08);color:var(--o)}
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:var(--ink2);border:1px solid var(--bd2);border-radius:9px;padding:12px 16px;font-size:13px;color:var(--w);box-shadow:0 8px 32px rgba(0,0,0,.5);animation:slideUp .3s var(--ez);display:flex;align-items:center;gap:8px;max-width:320px}
+.toast-item.ok{border-left:3px solid var(--g)}
+.toast-item.er{border-left:3px solid var(--err)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+@media(max-width:900px){
+  #sidebar{width:60px}
+  .sb-logo svg:last-child,.sb-ws,.sb-section,.sb-link span,.sb-badge,.sb-uname,.sb-uemail{display:none}
+  .sb-link{justify-content:center;padding:10px}
+  .sb-logo{justify-content:center;padding:16px}
+  .sb-nav{padding:4px 6px}
+  .sb-bottom{padding:8px 6px}
+  .sb-user{justify-content:center}
+  #content{padding:16px}
+}
+</style>
+</head>
+<body>
+<div id="loading"><div class="big-spin"></div><p>Loading interviews…</p></div>
+<nav id="sidebar">
+  <a href="peoplexats_dashboard.html" class="sb-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 71.24 71.31" style="height:28px;width:28px"><path fill="#fe572a" d="M56.71,35.62A35.71,35.71,0,0,1,71.24,6.88,21.83,21.83,0,0,0,64.43,0,35.83,35.83,0,0,1,35.62,14.56,35.61,35.61,0,0,1,6.85,0,22,22,0,0,0,0,6.88,35.73,35.73,0,0,1,14.53,35.65,35.85,35.85,0,0,1,0,64.43a22,22,0,0,0,6.85,6.88,35.77,35.77,0,0,1,57.58,0,21.7,21.7,0,0,0,6.81-6.84A35.86,35.86,0,0,1,56.71,35.62ZM35.62,44.38a8.73,8.73,0,1,1,8.76-8.73A8.71,8.71,0,0,1,35.62,44.38Z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 20" style="height:16px"><text x="0" y="16" font-family="system-ui" font-weight="800" font-size="16" fill="white">PeopleX</text></svg>
+  </a>
+  <div class="sb-ws"><div class="sb-ws-name" id="ws-name">Loading…</div><div class="sb-ws-role" id="ws-role">admin</div></div>
+  <div style="height:6px"></div>
+  <div class="sb-section">Recruiting</div>
+  <div class="sb-nav">
+    <a href="peoplexats_dashboard.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z" opacity=".8"/></svg><span>Dashboard</span></a>
+    <a href="peoplexats_jobs.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 4H3a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1zM5 4V3a3 3 0 016 0v1" opacity=".8"/></svg><span>Jobs</span></a>
+    <a href="peoplexats_pipeline.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h3v10H1V3zm4 3h3v7H5V6zm4-2h3v9H9V4zm3-3h3v14h-3V1z" opacity=".8"/></svg><span>Pipeline</span></a>
+    <a href="peoplexats_interviews.html" class="sb-link active"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="12" rx="2" opacity=".3"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".8"/></svg><span>Interviews</span><span class="sb-badge" id="badge-iv">0</span></a>
+    <a href="peoplexats_hires.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a5 5 0 100 10A5 5 0 008 1zM5.5 8.5l1.5 1.5 3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"/></svg><span>Hires</span></a>
+  </div>
+  <div class="sb-section" style="margin-top:8px">Workspace</div>
+  <div class="sb-nav">
+    <a href="peoplexats_analytics.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 12l3-4 3 2 3-5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"/></svg><span>Analytics</span></a>
+    <a href="peoplexats_notifications.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a4.5 4.5 0 00-4.5 4.5v2L2 10h12l-1.5-2V6A4.5 4.5 0 008 1.5zM6.5 12.5a1.5 1.5 0 003 0" opacity=".8"/></svg><span>Notifications</span></a>
+    <a href="peoplexats_agent.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" opacity=".3"/><path d="M5.5 9.5s.5 1.5 2.5 1.5 2.5-1.5 2.5-1.5M6 7h.5M9.5 7H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".9"/></svg><span>AI Agent</span></a>
+    <a href="peoplexats_settings.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5" opacity=".8"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity=".6"/></svg><span>Settings</span></a>
+  </div>
+  <div class="sb-bottom">
+    <div class="sb-user" onclick="signOut()">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div style="min-width:0"><div class="sb-uname" id="sb-uname">…</div><div class="sb-uemail" id="sb-uemail">…</div></div>
+    </div>
+  </div>
+</nav>
+<div id="main" style="display:none">
+  <div class="topbar">
+    <div class="tb-title">Interviews</div>
+    <button class="tb-btn tb-btn-pri" onclick="openScheduleModal()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Schedule Interview
+    </button>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-tab active" onclick="setFilter('upcoming',this)">Upcoming</button>
+    <button class="filter-tab" onclick="setFilter('all',this)">All</button>
+    <button class="filter-tab" onclick="setFilter('completed',this)">Completed</button>
+    <button class="filter-tab" onclick="setFilter('cancelled',this)">Cancelled</button>
+    <div class="filter-count" id="filter-count"></div>
+  </div>
+  <div id="content"><div id="iv-list"></div></div>
+</div>
+
+<!-- SCHEDULE MODAL -->
+<div class="modal-overlay" id="schedule-modal" style="display:none" onclick="if(event.target===this)closeScheduleModal()">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-title">Schedule Interview</h3><button class="modal-close" onclick="closeScheduleModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-iv-id">
+      <div class="field"><label>Candidate *</label><select id="iv-candidate"><option value="">Select candidate…</option></select></div>
+      <div class="field"><label>Job</label><select id="iv-job"><option value="">Select job…</option></select></div>
+      <div class="field-row">
+        <div class="field"><label>Date *</label><input type="date" id="iv-date"></div>
+        <div class="field"><label>Time *</label><input type="time" id="iv-time" value="10:00"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Duration</label>
+          <select id="iv-duration">
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60" selected>60 minutes</option>
+            <option value="90">90 minutes</option>
+            <option value="120">2 hours</option>
+          </select>
+        </div>
+        <div class="field"><label>Channel</label>
+          <select id="iv-channel">
+            <option value="video">📹 Video call</option>
+            <option value="in_person">🏢 In person</option>
+            <option value="whatsapp">💬 WhatsApp</option>
+            <option value="email">📧 Email</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="iv-notes" placeholder="Preparation notes or instructions for the interviewer…" rows="3"></textarea></div>
+      <div class="modal-foot">
+        <button class="btn btn-sec" onclick="closeScheduleModal()">Cancel</button>
+        <button class="btn btn-pri" id="save-iv-btn" onclick="saveInterview()">
+          <span id="save-iv-label">Schedule</span>
+          <span id="save-iv-spin" class="spin-sm" style="display:none"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCORECARD MODAL -->
+<div class="modal-overlay" id="scorecard-modal" style="display:none" onclick="if(event.target===this)closeScorecardModal()">
+  <div class="modal">
+    <div class="modal-head"><h3>Interview Scorecard</h3><button class="modal-close" onclick="closeScorecardModal()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="sc-iv-id">
+      <div id="sc-cand-name" style="font-size:14px;font-weight:700;color:var(--w);margin-bottom:2px"></div>
+      <div id="sc-job-name" style="font-size:12px;color:var(--mu);margin-bottom:18px"></div>
+      <div id="score-criteria"></div>
+      <div class="field">
+        <label>Overall Rating</label>
+        <div class="score-stars" id="overall-stars">
+          <div class="star" onclick="setOverall(1)">1</div>
+          <div class="star" onclick="setOverall(2)">2</div>
+          <div class="star" onclick="setOverall(3)">3</div>
+          <div class="star" onclick="setOverall(4)">4</div>
+          <div class="star" onclick="setOverall(5)">5</div>
+        </div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="sc-notes" rows="4" placeholder="Your assessment of this candidate…"></textarea></div>
+      <div class="modal-foot">
+        <button class="btn btn-sec" onclick="closeScorecardModal()">Cancel</button>
+        <button class="btn btn-pri" id="save-sc-btn" onclick="saveScorecard()">
+          <span id="save-sc-label">Save Scorecard</span>
+          <span id="save-sc-spin" class="spin-sm" style="display:none"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SB=supabase.createClient('https://fdkvbszbgjhkvybawxrf.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3Zic3piZ2poa3Z5YmF3eHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDM1NDUsImV4cCI6MjA4OTcxOTU0NX0.lc3QW3urgxJw1ucjkR4Buxw8OI034SI6vE1UoxOgYqM');
+let WS=null,MEMBER=null,allIVs=[],allCandidates=[],allJobs=[],currentFilter='upcoming',overallRating=0,criteriaScores={};
+const CRITERIA=['Communication','Technical Skills','Problem Solving','Culture Fit','Experience'];
+const CH={video:'📹 Video call',in_person:'🏢 In person',whatsapp:'💬 WhatsApp',email:'📧 Email'};
+
+async function init(){
+  const{data:{session}}=await SB.auth.getSession();
+  if(!session){window.location.href='peoplexats_auth.html';return;}
+  const{data:member}=await SB.from('team_members').select('*,workspaces(*)').eq('user_id',session.user.id).eq('status','active').single();
+  if(!member){window.location.href='peoplexats_onboarding.html';return;}
+  MEMBER=member;WS=member.workspaces;
+  document.getElementById('ws-name').textContent=WS.name;
+  document.getElementById('ws-role').textContent=member.role;
+  const name=member.full_name||session.user.email;
+  document.getElementById('sb-uname').textContent=name;
+  document.getElementById('sb-uemail').textContent=member.email||session.user.email;
+  document.getElementById('sb-avatar').textContent=name.charAt(0).toUpperCase();
+  document.getElementById('iv-date').value=new Date().toISOString().split('T')[0];
+  await loadAll();
+  document.getElementById('loading').style.display='none';
+  document.getElementById('main').style.display='flex';
+}
+
+async function loadAll(){
+  const[ivsRes,candsRes,jobsRes]=await Promise.all([
+    SB.from('interviews').select('*,candidates(full_name,email),jobs(title)').eq('workspace_id',WS.id).order('scheduled_at',{ascending:true}),
+    SB.from('candidates').select('id,full_name,job_id').eq('workspace_id',WS.id).neq('status','rejected').order('full_name'),
+    SB.from('jobs').select('id,title').eq('workspace_id',WS.id).order('title'),
+  ]);
+  allIVs=ivsRes.data||[];allCandidates=candsRes.data||[];allJobs=jobsRes.data||[];
+  const upcoming=allIVs.filter(iv=>iv.status==='scheduled'&&new Date(iv.scheduled_at)>=new Date()).length;
+  document.getElementById('badge-iv').textContent=upcoming;
+  const cs=document.getElementById('iv-candidate');
+  cs.innerHTML='<option value="">Select candidate…</option>'+allCandidates.map(c=>`<option value="${c.id}">${esc(c.full_name)}</option>`).join('');
+  const js=document.getElementById('iv-job');
+  js.innerHTML='<option value="">Select job…</option>'+allJobs.map(j=>`<option value="${j.id}">${esc(j.title)}</option>`).join('');
+  document.getElementById('iv-candidate').onchange=function(){
+    const c=allCandidates.find(x=>x.id===this.value);
+    if(c?.job_id)document.getElementById('iv-job').value=c.job_id;
+  };
+  render();
+}
+
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render(){
+  const now=new Date();
+  let ivs=allIVs;
+  if(currentFilter==='upcoming')ivs=ivs.filter(iv=>iv.status==='scheduled'&&new Date(iv.scheduled_at)>=now);
+  else if(currentFilter==='completed')ivs=ivs.filter(iv=>iv.status==='completed');
+  else if(currentFilter==='cancelled')ivs=ivs.filter(iv=>iv.status==='cancelled'||iv.status==='no_show');
+  document.getElementById('filter-count').textContent=`${ivs.length} interview${ivs.length!==1?'s':''}`;
+  const container=document.getElementById('iv-list');
+  if(!ivs.length){
+    container.innerHTML=`<div class="empty-full"><div class="ico">📅</div><h3>No interviews</h3><p>${currentFilter==='upcoming'?'Schedule your first interview to get started.':'No interviews in this category.'}</p>${currentFilter==='upcoming'?'<button class="tb-btn tb-btn-pri" onclick="openScheduleModal()" style="margin-top:4px;font-size:13px;padding:9px 20px">Schedule Interview</button>':''}</div>`;
+    return;
+  }
+  const groups={};
+  ivs.forEach(iv=>{
+    const d=new Date(iv.scheduled_at);
+    const key=d.toDateString();
+    const isToday=d.toDateString()===now.toDateString();
+    const isTomorrow=d.toDateString()===new Date(now.getTime()+86400000).toDateString();
+    const label=isToday?'Today':isTomorrow?'Tomorrow':d.toLocaleDateString('en-NG',{weekday:'long',month:'long',day:'numeric'});
+    if(!groups[key])groups[key]={label,items:[]};
+    groups[key].items.push(iv);
+  });
+  container.innerHTML=Object.values(groups).map(g=>`
+    <div><div class="date-label">${g.label}</div>
+    ${g.items.map(iv=>{
+      const dt=new Date(iv.scheduled_at);
+      const day=dt.getDate();
+      const month=dt.toLocaleDateString('en-NG',{month:'short'});
+      const time=dt.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});
+      const cname=iv.candidates?.full_name||'—';
+      const jname=iv.jobs?.title||'—';
+      const chLabel=CH[iv.channel]||iv.channel;
+      const dur=iv.duration_minutes?`⏱ ${iv.duration_minutes}min`:'';
+      const acts=iv.status==='scheduled'?`
+        <button class="iv-act green" onclick="event.stopPropagation();markComplete('${iv.id}')">✓ Complete</button>
+        <button class="iv-act" onclick="event.stopPropagation();openScorecardModal('${iv.id}')">📋 Score</button>
+        <button class="iv-act" onclick="event.stopPropagation();editIV('${iv.id}')">✏️</button>
+        <button class="iv-act red" onclick="event.stopPropagation();cancelIV('${iv.id}')">✕</button>
+      `:iv.status==='completed'?`<button class="iv-act" onclick="event.stopPropagation();openScorecardModal('${iv.id}')">📋 Scorecard</button>`:'';
+      return `<div class="iv-card ${iv.status}" onclick="openScorecardModal('${iv.id}')">
+        <div class="iv-time-block"><div class="iv-date-n">${day}</div><div class="iv-month">${month}</div><div class="iv-time">${time}</div></div>
+        <div class="iv-info">
+          <div class="iv-name">${esc(cname)}</div>
+          <div class="iv-job">${esc(jname)}</div>
+          <div class="iv-meta"><span class="iv-tag">${chLabel}</span>${dur?`<span class="iv-tag">${dur}</span>`:''}</div>
+        </div>
+        <div class="iv-right">
+          <span class="iv-status ${iv.status}">${iv.status.replace('_',' ')}</span>
+          <div class="iv-actions">${acts}</div>
+        </div>
+      </div>`;
+    }).join('')}</div>
+  `).join('');
+}
+
+function openScheduleModal(iv=null){
+  document.getElementById('edit-iv-id').value=iv?.id||'';
+  document.getElementById('modal-title').textContent=iv?'Edit Interview':'Schedule Interview';
+  document.getElementById('save-iv-label').textContent=iv?'Save Changes':'Schedule';
+  if(iv){
+    document.getElementById('iv-candidate').value=iv.candidate_id||'';
+    document.getElementById('iv-job').value=iv.job_id||'';
+    const dt=new Date(iv.scheduled_at);
+    document.getElementById('iv-date').value=dt.toISOString().split('T')[0];
+    document.getElementById('iv-time').value=dt.toTimeString().slice(0,5);
+    document.getElementById('iv-duration').value=iv.duration_minutes||60;
+    document.getElementById('iv-channel').value=iv.channel||'video';
+    document.getElementById('iv-notes').value=iv.notes||'';
+  }else{
+    ['iv-candidate','iv-job'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('iv-date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('iv-time').value='10:00';
+    document.getElementById('iv-duration').value='60';
+    document.getElementById('iv-channel').value='video';
+    document.getElementById('iv-notes').value='';
+  }
+  document.getElementById('schedule-modal').style.display='flex';
+}
+function closeScheduleModal(){document.getElementById('schedule-modal').style.display='none';}
+
+async function saveInterview(){
+  const candidateId=document.getElementById('iv-candidate').value;
+  const date=document.getElementById('iv-date').value;
+  const time=document.getElementById('iv-time').value;
+  if(!candidateId){toast('Please select a candidate','er');return;}
+  if(!date||!time){toast('Please set a date and time','er');return;}
+  const btn=document.getElementById('save-iv-btn');
+  const lbl=document.getElementById('save-iv-label');
+  const spin=document.getElementById('save-iv-spin');
+  btn.disabled=true;lbl.style.display='none';spin.style.display='inline-block';
+  const payload={
+    workspace_id:WS.id,candidate_id:candidateId,
+    job_id:document.getElementById('iv-job').value||null,
+    scheduled_at:new Date(`${date}T${time}:00`).toISOString(),
+    duration_minutes:parseInt(document.getElementById('iv-duration').value),
+    channel:document.getElementById('iv-channel').value,
+    notes:document.getElementById('iv-notes').value.trim()||null,
+    status:'scheduled',
+  };
+  const editId=document.getElementById('edit-iv-id').value;
+  const{error}=editId
+    ?await SB.from('interviews').update(payload).eq('id',editId).eq('workspace_id',WS.id)
+    :await SB.from('interviews').insert(payload);
+  btn.disabled=false;lbl.style.display='inline';spin.style.display='none';
+  if(error){toast(error.message,'er');return;}
+  if(!editId&&candidateId)await SB.from('candidates').update({status:'interview'}).eq('id',candidateId).eq('workspace_id',WS.id);
+  toast(editId?'Interview updated!':'Interview scheduled! 🎉','ok');
+  closeScheduleModal();
+  await loadAll();
+}
+
+function editIV(id){const iv=allIVs.find(x=>x.id===id);if(iv)openScheduleModal(iv);}
+
+async function markComplete(id){
+  const{error}=await SB.from('interviews').update({status:'completed'}).eq('id',id).eq('workspace_id',WS.id);
+  if(error){toast(error.message,'er');return;}
+  toast('Marked as completed','ok');await loadAll();
+}
+
+async function cancelIV(id){
+  if(!confirm('Cancel this interview?'))return;
+  const{error}=await SB.from('interviews').update({status:'cancelled'}).eq('id',id).eq('workspace_id',WS.id);
+  if(error){toast(error.message,'er');return;}
+  toast('Interview cancelled','ok');await loadAll();
+}
+
+async function openScorecardModal(ivId){
+  const iv=allIVs.find(x=>x.id===ivId);if(!iv)return;
+  const{data:sc}=await SB.from('interview_scorecards').select('*').eq('interview_id',ivId).maybeSingle();
+  document.getElementById('sc-iv-id').value=ivId;
+  document.getElementById('sc-cand-name').textContent=iv.candidates?.full_name||'—';
+  document.getElementById('sc-job-name').textContent=iv.jobs?.title||'—';
+  criteriaScores=sc?.scores||{};overallRating=sc?.overall||0;
+  document.getElementById('score-criteria').innerHTML=CRITERIA.map(cr=>`
+    <div class="score-row">
+      <div class="score-label">${cr}</div>
+      <div class="score-stars" id="stars-${cr.replace(/\s/g,'_')}">
+        ${[1,2,3,4,5].map(n=>`<div class="star ${(criteriaScores[cr]||0)>=n?'on':''}" onclick="setCriteria('${cr}',${n})">${n}</div>`).join('')}
+      </div>
+    </div>`).join('');
+  updateOverallStars();
+  document.getElementById('sc-notes').value=sc?.notes||'';
+  document.getElementById('save-sc-label').textContent=sc?'Update Scorecard':'Save Scorecard';
+  document.getElementById('scorecard-modal').style.display='flex';
+}
+function closeScorecardModal(){document.getElementById('scorecard-modal').style.display='none';}
+function setCriteria(name,val){
+  criteriaScores[name]=val;
+  const id=`stars-${name.replace(/\s/g,'_')}`;
+  document.querySelectorAll(`#${id} .star`).forEach((s,i)=>s.classList.toggle('on',i<val));
+}
+function setOverall(val){overallRating=val;updateOverallStars();}
+function updateOverallStars(){document.querySelectorAll('#overall-stars .star').forEach((s,i)=>s.classList.toggle('on',i<overallRating));}
+
+async function saveScorecard(){
+  const ivId=document.getElementById('sc-iv-id').value;
+  const btn=document.getElementById('save-sc-btn');
+  const lbl=document.getElementById('save-sc-label');
+  const spin=document.getElementById('save-sc-spin');
+  btn.disabled=true;lbl.style.display='none';spin.style.display='inline-block';
+  const payload={interview_id:ivId,interviewer_id:MEMBER.id,workspace_id:WS.id,scores:criteriaScores,overall:overallRating||null,notes:document.getElementById('sc-notes').value.trim()||null,submitted_at:new Date().toISOString()};
+  const{data:existing}=await SB.from('interview_scorecards').select('id').eq('interview_id',ivId).maybeSingle();
+  const{error}=existing
+    ?await SB.from('interview_scorecards').update(payload).eq('id',existing.id)
+    :await SB.from('interview_scorecards').insert(payload);
+  if(!error&&overallRating)await SB.from('interviews').update({overall_rating:overallRating,status:'completed'}).eq('id',ivId).eq('workspace_id',WS.id);
+  btn.disabled=false;lbl.style.display='inline';spin.style.display='none';
+  if(error){toast(error.message,'er');return;}
+  toast('Scorecard saved!','ok');closeScorecardModal();await loadAll();
+}
+
+async function signOut(){await SB.auth.signOut();window.location.href='peoplexats_auth.html';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type='ok'){const el=document.createElement('div');el.className=`toast-item ${type}`;el.innerHTML=`<span>${type==='ok'?'✓':'✕'}</span>${esc(msg)}`;document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3500);}
+init();
+</script>
+</body>
+</html>
