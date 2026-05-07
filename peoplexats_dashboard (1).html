@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PeopleX ATS — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --o:#fe572a;--od:rgba(254,87,42,0.12);--og:rgba(254,87,42,0.3);
+  --g:#8cc74f;--gd:rgba(140,199,79,0.1);
+  --ink:#080706;--ink2:#111009;--ink3:#1a1814;--ink4:#211f1c;
+  --w:#fff;--mu:rgba(255,255,255,0.42);--mu2:rgba(255,255,255,0.18);
+  --bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);
+  --err:#f87171;--errd:rgba(248,113,113,0.1);
+  --f:system-ui,-apple-system,sans-serif;
+  --mono:'SF Mono','Fira Code',monospace;
+  --ez:cubic-bezier(0.16,1,0.3,1);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--f);background:var(--ink);color:var(--w);-webkit-font-smoothing:antialiased;display:flex}
+
+/* ── LOADING ── */
+#loading{position:fixed;inset:0;z-index:999;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.big-spin{width:36px;height:36px;border:3px solid rgba(254,87,42,.3);border-top-color:var(--o);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:13px;color:var(--mu)}
+
+/* ── SIDEBAR ── */
+#sidebar{width:220px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow-y:auto;overflow-x:hidden}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;text-decoration:none}
+.sb-logo svg{height:22px;width:auto;flex-shrink:0}
+.sb-ws{padding:12px 14px;margin:10px 10px 4px;background:var(--ink3);border-radius:8px;border:1px solid var(--bd2)}
+.sb-ws-name{font-size:12px;font-weight:700;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-ws-role{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+.sb-section{padding:6px 10px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu2)}
+.sb-nav{padding:4px 10px;display:flex;flex-direction:column;gap:2px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:13px;font-weight:500;color:var(--mu);text-decoration:none;transition:all .15s;position:relative}
+.sb-link:hover{background:var(--ink3);color:var(--w)}
+.sb-link.active{background:var(--od);color:var(--o);font-weight:600}
+.sb-link.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--o);border-radius:0 2px 2px 0}
+.sb-link svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.sb-link.active svg{opacity:1}
+.sb-badge{margin-left:auto;background:var(--o);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;line-height:1.5}
+.sb-bottom{margin-top:auto;padding:12px 10px;border-top:1px solid var(--bd)}
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background .15s}
+.sb-user:hover{background:var(--ink3)}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--od);border:1px solid rgba(254,87,42,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--o);flex-shrink:0}
+.sb-uname{font-size:12px;font-weight:600;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-uemail{font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── TOPBAR ── */
+.topbar{height:56px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;background:var(--ink);position:relative;z-index:10}
+.tb-left{display:flex;align-items:center;gap:12px}
+.tb-title{font-size:15px;font-weight:700;color:var(--w)}
+.tb-sub{font-size:13px;color:var(--mu)}
+.tb-right{display:flex;align-items:center;gap:10px}
+.tb-btn{font-family:var(--f);font-size:12px;font-weight:600;border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 14px;transition:all .15s}
+.tb-btn-sec{background:var(--ink3);color:var(--mu);border:1px solid var(--bd2)}
+.tb-btn-sec:hover{color:var(--w);border-color:rgba(255,255,255,.2)}
+.tb-btn-pri{background:var(--o);color:#fff;box-shadow:0 2px 8px var(--og)}
+.tb-btn-pri:hover{background:#ff6a40;transform:translateY(-1px)}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;padding:28px}
+
+/* ── STAT CARDS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--ink2);border:1px solid var(--bd);border-radius:12px;padding:20px;cursor:default;transition:border-color .2s}
+.stat-card:hover{border-color:var(--bd2)}
+.stat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:12px}
+.stat-val{font-size:32px;font-weight:800;color:var(--w);letter-spacing:-.03em;line-height:1}
+.stat-sub{font-size:12px;color:var(--mu);margin-top:6px}
+.stat-card.orange .stat-val{color:var(--o)}
+.stat-card.green .stat-val{color:var(--g)}
+
+/* ── TWO-COL LAYOUT ── */
+.dash-grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+
+/* ── PANEL ── */
+.panel{background:var(--ink2);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.panel-head{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:13px;font-weight:700;color:var(--w);display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'⟩';color:var(--o);font-size:14px;font-weight:800}
+.panel-link{font-size:12px;color:var(--mu);text-decoration:none;transition:color .15s}
+.panel-link:hover{color:var(--w)}
+.panel-body{padding:0}
+
+/* ── JOBS TABLE ── */
+.job-row{display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--bd);transition:background .15s;text-decoration:none;cursor:pointer}
+.job-row:last-child{border-bottom:none}
+.job-row:hover{background:var(--ink3)}
+.job-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.job-dot.open{background:var(--g);box-shadow:0 0 6px rgba(140,199,79,.5)}
+.job-dot.draft{background:var(--mu2)}
+.job-dot.closed{background:rgba(248,113,113,.6)}
+.job-dot.paused{background:rgba(251,191,36,.6)}
+.job-info{flex:1;min-width:0}
+.job-title{font-size:13px;font-weight:600;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job-meta{font-size:11px;color:var(--mu);margin-top:1px}
+.job-count{font-size:12px;font-weight:700;color:var(--o)}
+.job-status{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:4px}
+.job-status.open{color:var(--g);background:var(--gd)}
+.job-status.draft{color:var(--mu);background:rgba(255,255,255,.05)}
+.job-status.closed{color:var(--err);background:var(--errd)}
+.job-status.paused{color:#fbbf24;background:rgba(251,191,36,.1)}
+
+/* ── ACTIVITY / CANDIDATE LIST ── */
+.cand-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--bd);transition:background .15s;cursor:pointer;text-decoration:none}
+.cand-row:last-child{border-bottom:none}
+.cand-row:hover{background:var(--ink3)}
+.cand-avatar{width:32px;height:32px;border-radius:50%;background:var(--ink3);border:1px solid var(--bd2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--mu)}
+.cand-info{flex:1;min-width:0}
+.cand-name{font-size:13px;font-weight:600;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cand-job{font-size:11px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cand-score{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.score-pill{font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px}
+.score-pill.high{color:var(--g);background:var(--gd);border:1px solid rgba(140,199,79,.2)}
+.score-pill.mid{color:#fbbf24;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2)}
+.score-pill.low{color:var(--err);background:var(--errd);border:1px solid rgba(248,113,113,.2)}
+.status-chip{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:4px;color:var(--mu);background:rgba(255,255,255,.06)}
+
+/* ── QUICK ACTIONS ── */
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bd)}
+.qa-item{background:var(--ink2);padding:16px;cursor:pointer;transition:background .15s;text-decoration:none;display:block}
+.qa-item:hover{background:var(--ink3)}
+.qa-ico{font-size:18px;margin-bottom:6px}
+.qa-label{font-size:12px;font-weight:600;color:var(--w)}
+.qa-desc{font-size:11px;color:var(--mu);margin-top:2px;line-height:1.4}
+
+/* ── MINI PIPELINE ── */
+.pipe-stages{display:flex;flex-direction:column;gap:0}
+.pipe-stage{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--bd)}
+.pipe-stage:last-child{border-bottom:none}
+.pipe-stage-left{display:flex;align-items:center;gap:10px}
+.pipe-stage-bar-wrap{width:60px;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.pipe-stage-bar{height:100%;border-radius:2px;background:var(--o)}
+.pipe-stage-name{font-size:12px;color:rgba(255,255,255,.6)}
+.pipe-stage-n{font-size:13px;font-weight:700;color:var(--w)}
+
+/* ── EMPTY ── */
+.empty{padding:40px 20px;text-align:center}
+.empty-ico{font-size:32px;margin-bottom:10px;opacity:.4}
+.empty p{font-size:13px;color:var(--mu);line-height:1.6}
+.empty a{color:var(--o);text-decoration:none}
+.empty a:hover{text-decoration:underline}
+
+/* ── NEW JOB MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--ink2);border:1px solid var(--bd2);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;animation:slideUp .3s var(--ez)}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:16px;font-weight:700;color:var(--w)}
+.modal-close{background:none;border:none;color:var(--mu);cursor:pointer;font-size:18px;padding:4px;line-height:1;border-radius:4px;transition:color .15s}
+.modal-close:hover{color:var(--w)}
+.modal-body{padding:20px 24px 24px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--ink3);border:1.5px solid var(--bd2);color:var(--w);font-family:var(--f);font-size:13px;padding:10px 12px;border-radius:8px;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.2)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--o);box-shadow:0 0 0 3px var(--od)}
+.field select option{background:var(--ink3);color:var(--w)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--bd)}
+.btn{font-family:var(--f);font-size:13px;font-weight:600;border:none;border-radius:7px;padding:10px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-sec{background:var(--ink3);color:var(--mu);border:1px solid var(--bd2)}
+.btn-sec:hover{color:var(--w)}
+.btn-pri{background:var(--o);color:#fff}
+.btn-pri:hover{background:#ff6a40}
+.btn-pri:disabled{opacity:.5;cursor:not-allowed}
+.spin-sm{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:var(--ink2);border:1px solid var(--bd2);border-radius:9px;padding:12px 16px;font-size:13px;color:var(--w);box-shadow:0 8px 32px rgba(0,0,0,.5);animation:slideUp .3s var(--ez);display:flex;align-items:center;gap:8px;max-width:320px}
+.toast-item.ok{border-left:3px solid var(--g)}
+.toast-item.er{border-left:3px solid var(--err)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
+
+@media(max-width:900px){
+  #sidebar{width:60px}
+  .sb-logo svg:last-child,.sb-ws,.sb-section,.sb-link span,.sb-badge,.sb-uname,.sb-uemail{display:none}
+  .sb-link{justify-content:center;padding:10px}
+  .sb-logo{justify-content:center;padding:16px}
+  .sb-nav{padding:4px 6px}
+  .sb-bottom{padding:8px 6px}
+  .sb-user{justify-content:center}
+  .dash-grid{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="big-spin"></div><p>Loading dashboard…</p></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <a href="peoplexats_dashboard.html" class="sb-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 71.24 71.31"><path fill="#fe572a" d="M56.71,35.62A35.71,35.71,0,0,1,71.24,6.88,21.83,21.83,0,0,0,64.43,0,35.83,35.83,0,0,1,35.62,14.56,35.61,35.61,0,0,1,6.85,0,22,22,0,0,0,0,6.88,35.73,35.73,0,0,1,14.53,35.65,35.85,35.85,0,0,1,0,64.43a22,22,0,0,0,6.85,6.88,35.77,35.77,0,0,1,57.58,0,21.7,21.7,0,0,0,6.81-6.84A35.86,35.86,0,0,1,56.71,35.62ZM35.62,44.38a8.73,8.73,0,1,1,8.76-8.73A8.71,8.71,0,0,1,35.62,44.38Z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 20" style="height:16px"><text x="0" y="16" font-family="system-ui" font-weight="800" font-size="16" fill="white">PeopleX</text></svg>
+  </a>
+  <div class="sb-ws"><div class="sb-ws-name" id="ws-name">Loading…</div><div class="sb-ws-role" id="ws-role">admin</div></div>
+  <div style="height:6px"></div>
+  <div class="sb-section">Recruiting</div>
+  <div class="sb-nav">
+    <a href="peoplexats_dashboard.html" class="sb-link active">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z" opacity=".8"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="peoplexats_jobs.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 4H3a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1zM5 4V3a3 3 0 016 0v1" opacity=".8"/></svg>
+      <span>Jobs</span>
+      <span class="sb-badge" id="badge-jobs">0</span>
+    </a>
+    <a href="peoplexats_pipeline.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h3v10H1V3zm4 3h3v7H5V6zm4-2h3v9H9V4zm3-3h3v14h-3V1z" opacity=".8"/></svg>
+      <span>Pipeline</span>
+      <span class="sb-badge" id="badge-cands">0</span>
+    </a>
+    <a href="peoplexats_interviews.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="12" rx="2" opacity=".3"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".8"/></svg>
+      <span>Interviews</span>
+    </a>
+    <a href="peoplexats_hires.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a5 5 0 100 10A5 5 0 008 1zM5.5 8.5l1.5 1.5 3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"/></svg>
+      <span>Hires</span>
+    </a>
+  </div>
+  <div class="sb-section" style="margin-top:8px">Workspace</div>
+  <div class="sb-nav">
+    <a href="peoplexats_analytics.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 12l3-4 3 2 3-5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"/></svg>
+      <span>Analytics</span>
+    </a>
+    <a href="peoplexats_notifications.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a4.5 4.5 0 00-4.5 4.5v2L2 10h12l-1.5-2V6A4.5 4.5 0 008 1.5zM6.5 12.5a1.5 1.5 0 003 0" opacity=".8"/></svg>
+      <span>Notifications</span>
+    </a>
+    <a href="peoplexats_agent.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" opacity=".3"/><path d="M5.5 9.5s.5 1.5 2.5 1.5 2.5-1.5 2.5-1.5M6 7h.5M9.5 7H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".9"/></svg>
+      <span>AI Agent</span>
+    </a>
+    <a href="peoplexats_settings.html" class="sb-link">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5a3 3 0 100 6A3 3 0 008 5zM3.5 7.5l-.8-.5A5 5 0 013 6.5l.5-.9.9.5A4 4 0 015.5 5l-.5-.9L5.5 4a5 5 0 011-.3l.2-1h1.6l.2 1a5 5 0 011 .3l.5-.6.9.6-.5.9A4 4 0 0110.5 5l.9-.5.5.9a5 5 0 01.3 1l1 .2v1.6l-1 .2a5 5 0 01-.3 1l.5.9-.9.5-.5.9a4 4 0 01-1.1 1.1l.5.9-.9.5a5 5 0 01-1 .3l-.2 1H7.4l-.2-1a5 5 0 01-1-.3l-.5.5-.9-.5.5-.9A4 4 0 014.2 11l-.9.5-.5-.9a5 5 0 01-.3-1l-1-.2V7.7l1-.2z" opacity=".8"/></svg>
+      <span>Settings</span>
+    </a>
+  </div>
+  <div class="sb-bottom">
+    <div class="sb-user" onclick="signOut()">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div style="min-width:0">
+        <div class="sb-uname" id="sb-uname">…</div>
+        <div class="sb-uemail" id="sb-uemail">…</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main" style="display:none">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-title">Dashboard</div>
+      <div class="tb-sub" id="tb-date"></div>
+    </div>
+    <div class="tb-right">
+      <a href="peoplexats_careers.html" target="_blank" class="tb-btn tb-btn-sec">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5H2A1 1 0 001 2.5v8a1 1 0 001 1h8a1 1 0 001-1V7M9.5 1.5h2v2M5.5 7.5l5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Careers Page
+      </a>
+      <button class="tb-btn tb-btn-pri" onclick="openJobModal()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M2 6.5h9" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Post a Job
+      </button>
+    </div>
+  </div>
+
+  <div id="content">
+    <!-- STAT CARDS -->
+    <div class="stats-row">
+      <div class="stat-card orange">
+        <div class="stat-label">Open Jobs</div>
+        <div class="stat-val" id="stat-jobs">—</div>
+        <div class="stat-sub" id="stat-jobs-sub">active listings</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Candidates</div>
+        <div class="stat-val" id="stat-cands">—</div>
+        <div class="stat-sub" id="stat-cands-sub">across all roles</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Interviews</div>
+        <div class="stat-val" id="stat-interviews">—</div>
+        <div class="stat-sub" id="stat-int-sub">scheduled</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Hires Made</div>
+        <div class="stat-val" id="stat-hires">—</div>
+        <div class="stat-sub" id="stat-hires-sub">successful placements</div>
+      </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="dash-grid">
+      <!-- LEFT: Jobs + Recent Candidates -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Jobs -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Active Jobs</div>
+            <a href="peoplexats_jobs.html" class="panel-link">All jobs →</a>
+          </div>
+          <div class="panel-body" id="jobs-list">
+            <div class="empty"><div class="empty-ico">💼</div><p>No jobs yet.<br><a onclick="openJobModal()" style="cursor:pointer">Post your first job</a> to get started.</p></div>
+          </div>
+        </div>
+
+        <!-- Recent Candidates -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Recent Candidates</div>
+            <a href="peoplexats_pipeline.html" class="panel-link">Full pipeline →</a>
+          </div>
+          <div class="panel-body" id="cands-list">
+            <div class="empty"><div class="empty-ico">👤</div><p>No candidates yet.<br>Share your <a href="peoplexats_careers.html" target="_blank">careers page</a> to start receiving applications.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Quick Actions -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Quick Actions</div>
+          </div>
+          <div class="qa-grid">
+            <a href="peoplexats_jobs.html" class="qa-item"><div class="qa-ico">💼</div><div class="qa-label">Post Job</div><div class="qa-desc">Create a new listing</div></a>
+            <a href="peoplexats_pipeline.html" class="qa-item"><div class="qa-ico">📋</div><div class="qa-label">Pipeline</div><div class="qa-desc">Review candidates</div></a>
+            <a href="peoplexats_interviews.html" class="qa-item"><div class="qa-ico">📅</div><div class="qa-label">Schedule</div><div class="qa-desc">Book interviews</div></a>
+            <a href="peoplexats_agent.html" class="qa-item"><div class="qa-ico">✦</div><div class="qa-label">AI Agent</div><div class="qa-desc">Ask anything</div></a>
+          </div>
+        </div>
+
+        <!-- Pipeline Mini View -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Pipeline Snapshot</div>
+            <a href="peoplexats_pipeline.html" class="panel-link">View →</a>
+          </div>
+          <div class="pipe-stages" id="pipeline-snap">
+            <div class="empty" style="padding:24px 20px"><p style="font-size:12px">Pipeline data will appear as candidates apply.</p></div>
+          </div>
+        </div>
+
+        <!-- Upcoming Interviews -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Upcoming Interviews</div>
+            <a href="peoplexats_interviews.html" class="panel-link">All →</a>
+          </div>
+          <div id="interviews-list">
+            <div class="empty" style="padding:24px 20px"><div class="empty-ico" style="font-size:24px">📅</div><p style="font-size:12px">No interviews scheduled yet.</p></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW JOB MODAL -->
+<div class="modal-overlay" id="job-modal" style="display:none" onclick="if(event.target===this)closeJobModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Post a New Job</h3>
+      <button class="modal-close" onclick="closeJobModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Job Title *</label><input type="text" id="j-title" placeholder="e.g. Senior Frontend Engineer"></div>
+      <div class="field-row">
+        <div class="field"><label>Department</label><input type="text" id="j-dept" placeholder="Engineering"></div>
+        <div class="field"><label>Location</label><input type="text" id="j-loc" placeholder="Lagos, Nigeria"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Job Type</label>
+          <select id="j-type">
+            <option value="full_time">Full-time</option>
+            <option value="part_time">Part-time</option>
+            <option value="contract">Contract</option>
+            <option value="remote">Remote</option>
+            <option value="hybrid">Hybrid</option>
+          </select>
+        </div>
+        <div class="field"><label>Status</label>
+          <select id="j-status">
+            <option value="open">Open (live now)</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Job Description</label><textarea id="j-desc" placeholder="Describe the role, responsibilities, and what makes it exciting…" rows="4"></textarea></div>
+      <div class="field"><label>Requirements</label><textarea id="j-reqs" placeholder="Experience, skills, qualifications…" rows="3"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Min Salary</label><input type="number" id="j-sal-min" placeholder="150000"></div>
+        <div class="field"><label>Max Salary</label><input type="number" id="j-sal-max" placeholder="300000"></div>
+      </div>
+      <div class="field"><label>Currency</label>
+        <select id="j-currency">
+          <option value="NGN">NGN — Nigerian Naira</option>
+          <option value="USD">USD — US Dollar</option>
+          <option value="KES">KES — Kenyan Shilling</option>
+          <option value="GHS">GHS — Ghanaian Cedi</option>
+          <option value="ZAR">ZAR — South African Rand</option>
+        </select>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-sec" onclick="closeJobModal()">Cancel</button>
+        <button class="btn btn-pri" id="save-job-btn" onclick="saveJob()">
+          <span id="save-job-label">Post Job</span>
+          <span id="save-job-spin" class="spin-sm" style="display:none"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const SB = supabase.createClient(
+  'https://fdkvbszbgjhkvybawxrf.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3Zic3piZ2poa3Z5YmF3eHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDM1NDUsImV4cCI6MjA4OTcxOTU0NX0.lc3QW3urgxJw1ucjkR4Buxw8OI034SI6vE1UoxOgYqM'
+);
+
+let WS = null, MEMBER = null;
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await SB.auth.getSession();
+  if (!session) { window.location.href = 'peoplexats_auth.html'; return; }
+
+  // Date display
+  document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-NG',{weekday:'long',month:'long',day:'numeric'});
+
+  // Load member + workspace
+  const { data: member } = await SB.from('team_members').select('*,workspaces(*)').eq('user_id', session.user.id).eq('status','active').single();
+  if (!member) { window.location.href = 'peoplexats_onboarding.html'; return; }
+
+  MEMBER = member;
+  WS = member.workspaces;
+
+  // Update sidebar
+  document.getElementById('ws-name').textContent = WS.name;
+  document.getElementById('ws-role').textContent = member.role;
+  const name = member.full_name || session.user.email;
+  document.getElementById('sb-uname').textContent = name;
+  document.getElementById('sb-uemail').textContent = member.email || session.user.email;
+  document.getElementById('sb-avatar').textContent = name.charAt(0).toUpperCase();
+
+  // Load all dashboard data in parallel
+  await Promise.all([loadStats(), loadJobs(), loadCandidates(), loadPipeline(), loadInterviews()]);
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main').style.display = 'flex';
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const wsId = WS.id;
+  const [jobs, cands, interviews, hires] = await Promise.all([
+    SB.from('jobs').select('id',{count:'exact'}).eq('workspace_id',wsId).eq('status','open'),
+    SB.from('candidates').select('id',{count:'exact'}).eq('workspace_id',wsId),
+    SB.from('interviews').select('id',{count:'exact'}).eq('workspace_id',wsId).eq('status','scheduled'),
+    SB.from('hires').select('id',{count:'exact'}).eq('workspace_id',wsId),
+  ]);
+  document.getElementById('stat-jobs').textContent = jobs.count ?? 0;
+  document.getElementById('stat-cands').textContent = cands.count ?? 0;
+  document.getElementById('stat-interviews').textContent = interviews.count ?? 0;
+  document.getElementById('stat-hires').textContent = hires.count ?? 0;
+  document.getElementById('badge-jobs').textContent = jobs.count ?? 0;
+  document.getElementById('badge-cands').textContent = cands.count ?? 0;
+  document.getElementById('stat-jobs-sub').textContent = `of ${(await SB.from('jobs').select('id',{count:'exact'}).eq('workspace_id',wsId)).count ?? 0} total`;
+  document.getElementById('stat-int-sub').textContent = 'scheduled';
+  document.getElementById('stat-hires-sub').textContent = 'successful placements';
+}
+
+// ── JOBS ─────────────────────────────────────────────────────────────────────
+async function loadJobs() {
+  const { data: jobs } = await SB.from('jobs').select('*').eq('workspace_id',WS.id).order('created_at',{ascending:false}).limit(8);
+  const el = document.getElementById('jobs-list');
+  if (!jobs || jobs.length === 0) return;
+  el.innerHTML = jobs.map(j => `
+    <a href="peoplexats_jobs.html?id=${j.id}" class="job-row">
+      <div class="job-dot ${j.status}"></div>
+      <div class="job-info">
+        <div class="job-title">${escHtml(j.title)}</div>
+        <div class="job-meta">${j.department||''}${j.department&&j.location?' · ':''}${j.location||''}</div>
+      </div>
+      <div class="job-count">${j.applicant_count||0}</div>
+      <div class="job-status ${j.status}">${j.status}</div>
+    </a>
+  `).join('');
+}
+
+// ── CANDIDATES ───────────────────────────────────────────────────────────────
+async function loadCandidates() {
+  const { data: cands } = await SB.from('candidates').select('*,jobs(title)').eq('workspace_id',WS.id).order('created_at',{ascending:false}).limit(6);
+  const el = document.getElementById('cands-list');
+  if (!cands || cands.length === 0) return;
+  el.innerHTML = cands.map(c => {
+    const score = c.ai_score;
+    const pill = score != null ? `<span class="score-pill ${score>=70?'high':score>=45?'mid':'low'}">${Math.round(score)}</span>` : '';
+    const initials = c.full_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+    return `<a href="peoplexats_pipeline.html?id=${c.id}" class="cand-row">
+      <div class="cand-avatar">${initials}</div>
+      <div class="cand-info">
+        <div class="cand-name">${escHtml(c.full_name)}</div>
+        <div class="cand-job">${c.jobs?.title||'—'}</div>
+      </div>
+      <div class="cand-score">${pill}<span class="status-chip">${c.status}</span></div>
+    </a>`;
+  }).join('');
+}
+
+// ── PIPELINE SNAPSHOT ─────────────────────────────────────────────────────────
+async function loadPipeline() {
+  const { data: cands } = await SB.from('candidates').select('status').eq('workspace_id',WS.id);
+  if (!cands || cands.length === 0) return;
+  const stages = ['new','screening','shortlisted','interview','offer','hired'];
+  const labels = {'new':'New','screening':'Screening','shortlisted':'Shortlisted','interview':'Interview','offer':'Offer','hired':'Hired'};
+  const counts = {};
+  stages.forEach(s => counts[s] = 0);
+  cands.forEach(c => { if(counts[c.status]!==undefined) counts[c.status]++; });
+  const max = Math.max(...Object.values(counts), 1);
+  const el = document.getElementById('pipeline-snap');
+  el.innerHTML = stages.map(s => {
+    const pct = Math.round((counts[s]/max)*100);
+    return `<div class="pipe-stage">
+      <div class="pipe-stage-left">
+        <div class="pipe-stage-bar-wrap"><div class="pipe-stage-bar" style="width:${pct}%"></div></div>
+        <span class="pipe-stage-name">${labels[s]}</span>
+      </div>
+      <span class="pipe-stage-n">${counts[s]}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── INTERVIEWS ────────────────────────────────────────────────────────────────
+async function loadInterviews() {
+  const { data: ivs } = await SB.from('interviews')
+    .select('*,candidates(full_name),jobs(title)')
+    .eq('workspace_id',WS.id)
+    .eq('status','scheduled')
+    .gte('scheduled_at', new Date().toISOString())
+    .order('scheduled_at',{ascending:true})
+    .limit(4);
+  const el = document.getElementById('interviews-list');
+  if (!ivs || ivs.length === 0) return;
+  el.innerHTML = ivs.map(iv => {
+    const dt = new Date(iv.scheduled_at);
+    const dateStr = dt.toLocaleDateString('en-NG',{month:'short',day:'numeric'});
+    const timeStr = dt.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="cand-row" style="cursor:default">
+      <div class="cand-avatar" style="background:rgba(140,199,79,.1);color:var(--g);border-color:rgba(140,199,79,.2)">${dateStr.split(' ')[1]}</div>
+      <div class="cand-info">
+        <div class="cand-name">${escHtml(iv.candidates?.full_name||'—')}</div>
+        <div class="cand-job">${iv.jobs?.title||'—'} · ${timeStr} · ${iv.channel}</div>
+      </div>
+      <span class="status-chip">${dateStr}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── JOB MODAL ─────────────────────────────────────────────────────────────────
+function openJobModal() { document.getElementById('job-modal').style.display='flex'; }
+function closeJobModal() { document.getElementById('job-modal').style.display='none'; }
+
+async function saveJob() {
+  const title = document.getElementById('j-title').value.trim();
+  if (!title) { toast('Job title is required','er'); return; }
+
+  const btn = document.getElementById('save-job-btn');
+  const lbl = document.getElementById('save-job-label');
+  const spin = document.getElementById('save-job-spin');
+  btn.disabled = true; lbl.style.display='none'; spin.style.display='inline-block';
+
+  const status = document.getElementById('j-status').value;
+  const payload = {
+    workspace_id: WS.id,
+    title,
+    department: document.getElementById('j-dept').value.trim()||null,
+    location: document.getElementById('j-loc').value.trim()||null,
+    job_type: document.getElementById('j-type').value,
+    description: document.getElementById('j-desc').value.trim()||null,
+    requirements: document.getElementById('j-reqs').value.trim()||null,
+    salary_min: document.getElementById('j-sal-min').value||null,
+    salary_max: document.getElementById('j-sal-max').value||null,
+    currency: document.getElementById('j-currency').value,
+    status,
+    published_at: status==='open' ? new Date().toISOString() : null,
+  };
+
+  const { error } = await SB.from('jobs').insert(payload);
+  btn.disabled=false; lbl.style.display='inline'; spin.style.display='none';
+
+  if (error) { toast(error.message,'er'); return; }
+  toast('Job posted successfully! 🎉','ok');
+  closeJobModal();
+  // Reset form
+  ['j-title','j-dept','j-loc','j-desc','j-reqs','j-sal-min','j-sal-max'].forEach(id=>document.getElementById(id).value='');
+  await Promise.all([loadStats(), loadJobs()]);
+}
+
+// ── SIGN OUT ─────────────────────────────────────────────────────────────────
+async function signOut() {
+  await SB.auth.signOut();
+  window.location.href = 'peoplexats_auth.html';
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  el.innerHTML = `<span>${type==='ok'?'✓':'✕'}</span>${escHtml(msg)}`;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(), 4000);
+}
+
+init();
+</script>
+</body>
+</html>
