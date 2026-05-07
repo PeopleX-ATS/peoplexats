@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PeopleX ATS — Notifications</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --o:#fe572a;--od:rgba(254,87,42,0.12);--og:rgba(254,87,42,0.3);
+  --g:#8cc74f;--gd:rgba(140,199,79,0.1);
+  --ink:#080706;--ink2:#111009;--ink3:#1a1814;
+  --w:#fff;--mu:rgba(255,255,255,0.42);--mu2:rgba(255,255,255,0.18);
+  --bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);
+  --err:#f87171;--errd:rgba(248,113,113,0.1);
+  --f:system-ui,-apple-system,sans-serif;
+  --ez:cubic-bezier(0.16,1,0.3,1);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--f);background:var(--ink);color:var(--w);-webkit-font-smoothing:antialiased;display:flex}
+#loading{position:fixed;inset:0;z-index:999;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.big-spin{width:36px;height:36px;border:3px solid rgba(254,87,42,.3);border-top-color:var(--o);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:13px;color:var(--mu)}
+#sidebar{width:220px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow-y:auto}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;text-decoration:none}
+.sb-ws{padding:12px 14px;margin:10px 10px 4px;background:var(--ink3);border-radius:8px;border:1px solid var(--bd2)}
+.sb-ws-name{font-size:12px;font-weight:700;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-ws-role{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+.sb-section{padding:6px 10px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu2)}
+.sb-nav{padding:4px 10px;display:flex;flex-direction:column;gap:2px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:13px;font-weight:500;color:var(--mu);text-decoration:none;transition:all .15s;position:relative}
+.sb-link:hover{background:var(--ink3);color:var(--w)}
+.sb-link.active{background:var(--od);color:var(--o);font-weight:600}
+.sb-link.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--o);border-radius:0 2px 2px 0}
+.sb-link svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.sb-link.active svg{opacity:1}
+.sb-badge{margin-left:auto;background:var(--o);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;line-height:1.5}
+.sb-bottom{margin-top:auto;padding:12px 10px;border-top:1px solid var(--bd)}
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background .15s}
+.sb-user:hover{background:var(--ink3)}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--od);border:1px solid rgba(254,87,42,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--o);flex-shrink:0}
+.sb-uname{font-size:12px;font-weight:600;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-uemail{font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:56px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:700;color:var(--w)}
+.tb-right{display:flex;align-items:center;gap:10px}
+.tb-btn{font-family:var(--f);font-size:12px;font-weight:600;border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 14px;transition:all .15s}
+.tb-btn-sec{background:var(--ink3);color:var(--mu);border:1px solid var(--bd2)}
+.tb-btn-sec:hover{color:var(--w);border-color:rgba(255,255,255,.2)}
+.filter-bar{padding:10px 28px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.filter-tab{font-family:var(--f);font-size:12px;font-weight:600;background:none;border:1px solid var(--bd2);border-radius:6px;color:var(--mu);padding:5px 14px;cursor:pointer;transition:all .15s}
+.filter-tab:hover{color:var(--w)}
+.filter-tab.active{background:var(--od);border-color:rgba(254,87,42,.3);color:var(--o)}
+.filter-count{margin-left:auto;font-size:12px;color:var(--mu)}
+#content{flex:1;overflow-y:auto}
+
+/* NOTIFICATION LIST */
+.notif-item{display:flex;align-items:flex-start;gap:14px;padding:14px 28px;border-bottom:1px solid var(--bd);transition:background .12s;cursor:pointer;position:relative}
+.notif-item:hover{background:rgba(255,255,255,.02)}
+.notif-item.unread{background:rgba(254,87,42,.03)}
+.notif-item.unread::before{content:'';position:absolute;left:14px;top:50%;transform:translateY(-50%);width:6px;height:6px;background:var(--o);border-radius:50%}
+.notif-ico{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px}
+.notif-ico.application{background:rgba(140,199,79,.1);border:1px solid rgba(140,199,79,.2)}
+.notif-ico.interview{background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2)}
+.notif-ico.hire{background:rgba(254,87,42,.12);border:1px solid rgba(254,87,42,.2)}
+.notif-ico.stage{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2)}
+.notif-ico.fee{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2)}
+.notif-ico.system{background:rgba(255,255,255,.06);border:1px solid var(--bd2)}
+.notif-body{flex:1;min-width:0}
+.notif-title{font-size:13px;font-weight:600;color:var(--w);margin-bottom:3px;line-height:1.4}
+.notif-desc{font-size:12px;color:var(--mu);line-height:1.5}
+.notif-time{font-size:11px;color:var(--mu2);flex-shrink:0;white-space:nowrap;margin-top:2px}
+.notif-channel{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:4px;margin-top:5px}
+.notif-channel.whatsapp{color:#25d366;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2)}
+.notif-channel.email{color:var(--mu);background:rgba(255,255,255,.05);border:1px solid var(--bd2)}
+.notif-channel.system{color:var(--mu2);background:rgba(255,255,255,.04);border:1px solid var(--bd)}
+
+/* SEND MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+.modal{background:var(--ink2);border:1px solid var(--bd2);border-radius:16px;width:100%;max-width:520px;animation:slideUp .3s var(--ez);margin:auto}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{padding:22px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:16px;font-weight:700;color:var(--w)}
+.modal-close{background:none;border:none;color:var(--mu);cursor:pointer;font-size:18px;padding:4px;border-radius:4px;line-height:1}
+.modal-close:hover{color:var(--w)}
+.modal-body{padding:18px 24px 24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:var(--ink3);border:1.5px solid var(--bd2);color:var(--w);font-family:var(--f);font-size:13px;padding:9px 12px;border-radius:8px;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.2)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--o);box-shadow:0 0 0 3px var(--od)}
+.field select option{background:var(--ink3)}
+.field textarea{resize:vertical;min-height:90px;line-height:1.6}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--bd)}
+.btn{font-family:var(--f);font-size:13px;font-weight:600;border:none;border-radius:7px;padding:10px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-sec{background:var(--ink3);color:var(--mu);border:1px solid var(--bd2)}
+.btn-sec:hover{color:var(--w)}
+.btn-pri{background:var(--o);color:#fff}
+.btn-pri:hover{background:#ff6a40}
+.btn-pri:disabled{opacity:.5;cursor:not-allowed}
+.spin-sm{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+/* EMPTY */
+.empty-full{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;gap:12px;padding:40px}
+.empty-full .ico{font-size:40px;opacity:.3}
+.empty-full h3{font-size:18px;font-weight:700;color:var(--w)}
+.empty-full p{font-size:14px;color:var(--mu);max-width:320px;line-height:1.7}
+
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:var(--ink2);border:1px solid var(--bd2);border-radius:9px;padding:12px 16px;font-size:13px;color:var(--w);box-shadow:0 8px 32px rgba(0,0,0,.5);animation:slideUp .3s var(--ez);display:flex;align-items:center;gap:8px;max-width:320px}
+.toast-item.ok{border-left:3px solid var(--g)}
+.toast-item.er{border-left:3px solid var(--err)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+@media(max-width:900px){
+  #sidebar{width:60px}
+  .sb-logo svg:last-child,.sb-ws,.sb-section,.sb-link span,.sb-badge,.sb-uname,.sb-uemail{display:none}
+  .sb-link{justify-content:center;padding:10px}
+  .sb-logo{justify-content:center;padding:16px}
+  .sb-nav{padding:4px 6px}
+  .sb-bottom{padding:8px 6px}
+  .sb-user{justify-content:center}
+  .notif-item{padding:12px 16px}
+  .notif-item.unread::before{left:6px}
+}
+</style>
+</head>
+<body>
+<div id="loading"><div class="big-spin"></div><p>Loading notifications…</p></div>
+
+<nav id="sidebar">
+  <a href="peoplexats_dashboard.html" class="sb-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 71.24 71.31" style="height:28px;width:28px"><path fill="#fe572a" d="M56.71,35.62A35.71,35.71,0,0,1,71.24,6.88,21.83,21.83,0,0,0,64.43,0,35.83,35.83,0,0,1,35.62,14.56,35.61,35.61,0,0,1,6.85,0,22,22,0,0,0,0,6.88,35.73,35.73,0,0,1,14.53,35.65,35.85,35.85,0,0,1,0,64.43a22,22,0,0,0,6.85,6.88,35.77,35.77,0,0,1,57.58,0,21.7,21.7,0,0,0,6.81-6.84A35.86,35.86,0,0,1,56.71,35.62ZM35.62,44.38a8.73,8.73,0,1,1,8.76-8.73A8.71,8.71,0,0,1,35.62,44.38Z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 20" style="height:16px"><text x="0" y="16" font-family="system-ui" font-weight="800" font-size="16" fill="white">PeopleX</text></svg>
+  </a>
+  <div class="sb-ws"><div class="sb-ws-name" id="ws-name">Loading…</div><div class="sb-ws-role" id="ws-role">admin</div></div>
+  <div style="height:6px"></div>
+  <div class="sb-section">Recruiting</div>
+  <div class="sb-nav">
+    <a href="peoplexats_dashboard.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z" opacity=".8"/></svg><span>Dashboard</span></a>
+    <a href="peoplexats_jobs.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 4H3a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1zM5 4V3a3 3 0 016 0v1" opacity=".8"/></svg><span>Jobs</span></a>
+    <a href="peoplexats_pipeline.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h3v10H1V3zm4 3h3v7H5V6zm4-2h3v9H9V4zm3-3h3v14h-3V1z" opacity=".8"/></svg><span>Pipeline</span></a>
+    <a href="peoplexats_interviews.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="12" rx="2" opacity=".3"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".8"/></svg><span>Interviews</span></a>
+    <a href="peoplexats_hires.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a5 5 0 100 10A5 5 0 008 1zM5.5 8.5l1.5 1.5 3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"/></svg><span>Hires</span></a>
+  </div>
+  <div class="sb-section" style="margin-top:8px">Workspace</div>
+  <div class="sb-nav">
+    <a href="peoplexats_analytics.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 12l3-4 3 2 3-5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"/></svg><span>Analytics</span></a>
+    <a href="peoplexats_notifications.html" class="sb-link active"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a4.5 4.5 0 00-4.5 4.5v2L2 10h12l-1.5-2V6A4.5 4.5 0 008 1.5zM6.5 12.5a1.5 1.5 0 003 0" opacity=".8"/></svg><span>Notifications</span><span class="sb-badge" id="badge-n">0</span></a>
+    <a href="peoplexats_agent.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" opacity=".3"/><path d="M5.5 9.5s.5 1.5 2.5 1.5 2.5-1.5 2.5-1.5M6 7h.5M9.5 7H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".9"/></svg><span>AI Agent</span></a>
+    <a href="peoplexats_settings.html" class="sb-link"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5" opacity=".8"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" opacity=".6"/></svg><span>Settings</span></a>
+  </div>
+  <div class="sb-bottom">
+    <div class="sb-user" onclick="signOut()">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div style="min-width:0"><div class="sb-uname" id="sb-uname">…</div><div class="sb-uemail" id="sb-uemail">…</div></div>
+    </div>
+  </div>
+</nav>
+
+<div id="main" style="display:none">
+  <div class="topbar">
+    <div class="tb-title">Notifications</div>
+    <div class="tb-right">
+      <button class="tb-btn tb-btn-sec" onclick="markAllRead()">Mark all read</button>
+      <button class="tb-btn tb-btn-sec" onclick="openSendModal()" style="background:var(--od);color:var(--o);border-color:rgba(254,87,42,.3)">
+        💬 Send Notification
+      </button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-tab" onclick="setFilter('application',this)">Applications</button>
+    <button class="filter-tab" onclick="setFilter('interview',this)">Interviews</button>
+    <button class="filter-tab" onclick="setFilter('hire',this)">Hires</button>
+    <button class="filter-tab" onclick="setFilter('system',this)">System</button>
+    <div class="filter-count" id="filter-count"></div>
+  </div>
+  <div id="notif-list"></div>
+</div>
+
+<!-- SEND NOTIFICATION MODAL -->
+<div class="modal-overlay" id="send-modal" style="display:none" onclick="if(event.target===this)closeSendModal()">
+  <div class="modal">
+    <div class="modal-head"><h3>Send Notification to Candidate</h3><button class="modal-close" onclick="closeSendModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Candidate *</label><select id="sn-candidate"><option value="">Select candidate…</option></select></div>
+      <div class="field"><label>Channel</label>
+        <select id="sn-channel">
+          <option value="whatsapp">💬 WhatsApp</option>
+          <option value="email">📧 Email</option>
+        </select>
+      </div>
+      <div class="field"><label>Template</label>
+        <select id="sn-template" onchange="applyTemplate()">
+          <option value="">Custom message…</option>
+          <option value="application_received">Application Received</option>
+          <option value="shortlisted">You've been Shortlisted</option>
+          <option value="interview_invite">Interview Invitation</option>
+          <option value="offer">Job Offer</option>
+          <option value="rejected">Application Unsuccessful</option>
+        </select>
+      </div>
+      <div class="field"><label>Message *</label><textarea id="sn-message" placeholder="Type your message here…" rows="5"></textarea></div>
+      <div style="font-size:11px;color:var(--mu2);margin-bottom:14px;line-height:1.5">Note: WhatsApp notifications are sent via your workspace's configured WhatsApp number. Email goes to the candidate's registered address.</div>
+      <div class="modal-foot">
+        <button class="btn btn-sec" onclick="closeSendModal()">Cancel</button>
+        <button class="btn btn-pri" id="send-btn" onclick="sendNotification()">
+          <span id="send-label">Send</span>
+          <span id="send-spin" class="spin-sm" style="display:none"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SB=supabase.createClient('https://fdkvbszbgjhkvybawxrf.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3Zic3piZ2poa3Z5YmF3eHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDM1NDUsImV4cCI6MjA4OTcxOTU0NX0.lc3QW3urgxJw1ucjkR4Buxw8OI034SI6vE1UoxOgYqM');
+let WS=null,MEMBER=null,allNotifs=[],allCandidates=[],currentFilter='all';
+let readIds=new Set(JSON.parse(localStorage.getItem('px_read')||'[]'));
+
+const TEMPLATES={
+  application_received:`Hi {{name}},\n\nThank you for applying to {{job}} at {{company}}. We've received your application and will be in touch shortly.\n\nBest regards,\n{{company}} Team`,
+  shortlisted:`Hi {{name}},\n\nGreat news! You've been shortlisted for the {{job}} role at {{company}}. We'd love to move forward with your application.\n\nWe'll be in touch soon to schedule the next steps.\n\nBest regards,\n{{company}} Team`,
+  interview_invite:`Hi {{name}},\n\nWe'd like to invite you for an interview for the {{job}} position at {{company}}.\n\nWe'll send you the details shortly. Please let us know your availability.\n\nBest regards,\n{{company}} Team`,
+  offer:`Hi {{name}},\n\nCongratulations! We're pleased to offer you the {{job}} position at {{company}}. We'll be sending through the formal offer letter shortly.\n\nWelcome to the team!\n\n{{company}} Team`,
+  rejected:`Hi {{name}},\n\nThank you for your interest in the {{job}} role at {{company}} and the time you invested in our process.\n\nAfter careful consideration, we've decided to move forward with other candidates at this time. We'll keep your profile for future opportunities.\n\nBest regards,\n{{company}} Team`,
+};
+
+// Build synthetic notifications from activity_log + real events
+const EVENT_ICONS={
+  'new_application':{ico:'🟢',cls:'application',label:'New Application'},
+  'stage_change':{ico:'🔄',cls:'stage',label:'Stage Changed'},
+  'interview_scheduled':{ico:'📅',cls:'interview',label:'Interview Scheduled'},
+  'interview_completed':{ico:'✅',cls:'interview',label:'Interview Completed'},
+  'hired':{ico:'🎉',cls:'hire',label:'Hire Recorded'},
+  'fee_due':{ico:'💰',cls:'fee',label:'Fee Due'},
+  'notification_sent':{ico:'💬',cls:'system',label:'Notification Sent'},
+  'system':{ico:'⚙️',cls:'system',label:'System'},
+};
+
+async function init(){
+  const{data:{session}}=await SB.auth.getSession();
+  if(!session){window.location.href='peoplexats_auth.html';return;}
+  const{data:member}=await SB.from('team_members').select('*,workspaces(*)').eq('user_id',session.user.id).eq('status','active').single();
+  if(!member){window.location.href='peoplexats_onboarding.html';return;}
+  MEMBER=member;WS=member.workspaces;
+  document.getElementById('ws-name').textContent=WS.name;
+  document.getElementById('ws-role').textContent=member.role;
+  const name=member.full_name||session.user.email;
+  document.getElementById('sb-uname').textContent=name;
+  document.getElementById('sb-uemail').textContent=member.email||session.user.email;
+  document.getElementById('sb-avatar').textContent=name.charAt(0).toUpperCase();
+  await loadAll();
+  document.getElementById('loading').style.display='none';
+  document.getElementById('main').style.display='flex';
+}
+
+async function loadAll(){
+  const[logRes,candsRes,nlogRes]=await Promise.all([
+    SB.from('activity_log').select('*,candidates(full_name),jobs(title)').eq('workspace_id',WS.id).order('created_at',{ascending:false}).limit(100),
+    SB.from('candidates').select('id,full_name,email,phone').eq('workspace_id',WS.id).order('full_name'),
+    SB.from('notifications_log').select('*,candidates(full_name)').eq('workspace_id',WS.id).order('sent_at',{ascending:false}).limit(50),
+  ]);
+
+  allCandidates=candsRes.data||[];
+
+  // Populate send modal candidate select
+  document.getElementById('sn-candidate').innerHTML='<option value="">Select candidate…</option>'+
+    allCandidates.map(c=>`<option value="${c.id}" data-name="${esc(c.full_name)}" data-email="${esc(c.email||'')}" data-phone="${esc(c.phone||'')}">
+      ${esc(c.full_name)}${c.phone?' · '+c.phone:c.email?' · '+c.email:''}
+    </option>`).join('');
+
+  // Merge activity log + notifications log into unified list
+  const actItems=(logRes.data||[]).map(a=>({
+    id:'act_'+a.id,
+    type:a.event_type||'system',
+    title:buildTitle(a),
+    desc:buildDesc(a),
+    channel:null,
+    ts:a.created_at,
+    raw:a,
+  }));
+  const nlogItems=(nlogRes.data||[]).map(n=>({
+    id:'nlog_'+n.id,
+    type:'notification_sent',
+    title:`Notification sent to ${n.candidates?.full_name||'candidate'}`,
+    desc:n.message_body?.slice(0,120)+(n.message_body?.length>120?'…':''),
+    channel:n.channel||'system',
+    ts:n.sent_at||n.created_at,
+    raw:n,
+  }));
+
+  allNotifs=[...actItems,...nlogItems].sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+
+  const unread=allNotifs.filter(n=>!readIds.has(n.id)).length;
+  document.getElementById('badge-n').textContent=unread||'';
+  render();
+}
+
+function buildTitle(a){
+  const cname=a.candidates?.full_name||'A candidate';
+  const jname=a.jobs?.title||'a role';
+  switch(a.event_type){
+    case'new_application':return `${cname} applied for ${jname}`;
+    case'stage_change':return `${cname} moved to ${a.metadata?.to_stage||'new stage'}`;
+    case'interview_scheduled':return `Interview scheduled with ${cname}`;
+    case'interview_completed':return `Interview with ${cname} completed`;
+    case'hired':return `${cname} was hired for ${jname}`;
+    case'fee_due':return `Success fee due for ${cname}`;
+    default:return a.description||a.event_type||'Activity';
+  }
+}
+function buildDesc(a){
+  const jname=a.jobs?.title||'';
+  switch(a.event_type){
+    case'new_application':return `Applied via ${a.metadata?.source||'careers page'}${jname?' for '+jname:''}`;
+    case'stage_change':return `From ${a.metadata?.from_stage||'—'} → ${a.metadata?.to_stage||'—'}${jname?' on '+jname:''}`;
+    case'interview_scheduled':return `Scheduled for ${a.metadata?.scheduled_at?new Date(a.metadata.scheduled_at).toLocaleDateString('en-NG',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}`;
+    case'hired':return `Hired at ${a.metadata?.salary?a.metadata.currency+' '+Number(a.metadata.salary).toLocaleString():'agreed salary'}`;
+    default:return a.description||'';
+  }
+}
+
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render(){
+  let items=allNotifs;
+  if(currentFilter!=='all'){
+    if(currentFilter==='application')items=items.filter(n=>n.type==='new_application');
+    else if(currentFilter==='interview')items=items.filter(n=>n.type==='interview_scheduled'||n.type==='interview_completed');
+    else if(currentFilter==='hire')items=items.filter(n=>n.type==='hired'||n.type==='fee_due');
+    else if(currentFilter==='system')items=items.filter(n=>n.type==='notification_sent'||n.type==='system');
+  }
+  document.getElementById('filter-count').textContent=`${items.length} notification${items.length!==1?'s':''}`;
+  const el=document.getElementById('notif-list');
+  if(!items.length){
+    el.innerHTML=`<div class="empty-full"><div class="ico">🔔</div><h3>No notifications</h3><p>${currentFilter==='all'?'Notifications will appear here as candidates apply and move through your pipeline.':'No notifications in this category yet.'}</p></div>`;
+    return;
+  }
+  const ago=ts=>{
+    const d=Math.floor((Date.now()-new Date(ts))/1000);
+    if(d<60)return 'Just now';if(d<3600)return `${Math.floor(d/60)}m ago`;
+    if(d<86400)return `${Math.floor(d/3600)}h ago`;
+    if(d<604800)return `${Math.floor(d/86400)}d ago`;
+    return new Date(ts).toLocaleDateString('en-NG',{month:'short',day:'numeric'});
+  };
+  el.innerHTML=items.map(n=>{
+    const info=EVENT_ICONS[n.type]||EVENT_ICONS.system;
+    const isUnread=!readIds.has(n.id);
+    const chHtml=n.channel?`<span class="notif-channel ${n.channel}">${n.channel==='whatsapp'?'💬 WhatsApp':n.channel==='email'?'📧 Email':'⚙️ System'}</span>`:'';
+    return `<div class="notif-item ${isUnread?'unread':''}" onclick="markRead('${n.id}')">
+      <div class="notif-ico ${info.cls}">${info.ico}</div>
+      <div class="notif-body">
+        <div class="notif-title">${esc(n.title)}</div>
+        <div class="notif-desc">${esc(n.desc||'')}</div>
+        ${chHtml}
+      </div>
+      <div class="notif-time">${ago(n.ts)}</div>
+    </div>`;
+  }).join('');
+}
+
+function markRead(id){
+  readIds.add(id);
+  localStorage.setItem('px_read',JSON.stringify([...readIds]));
+  const el=document.querySelector(`.notif-item[onclick="markRead('${id}')"]`);
+  if(el)el.classList.remove('unread');
+  const unread=allNotifs.filter(n=>!readIds.has(n.id)).length;
+  document.getElementById('badge-n').textContent=unread||'';
+}
+
+function markAllRead(){
+  allNotifs.forEach(n=>readIds.add(n.id));
+  localStorage.setItem('px_read',JSON.stringify([...readIds]));
+  document.querySelectorAll('.notif-item.unread').forEach(el=>el.classList.remove('unread'));
+  document.getElementById('badge-n').textContent='';
+  toast('All notifications marked as read','ok');
+}
+
+// SEND MODAL
+function openSendModal(){document.getElementById('send-modal').style.display='flex';}
+function closeSendModal(){document.getElementById('send-modal').style.display='none';}
+
+function applyTemplate(){
+  const key=document.getElementById('sn-template').value;
+  if(!key){return;}
+  const candId=document.getElementById('sn-candidate').value;
+  const cand=allCandidates.find(c=>c.id===candId);
+  let msg=TEMPLATES[key]||'';
+  msg=msg.replace(/{{name}}/g,cand?.full_name||'[Candidate Name]');
+  msg=msg.replace(/{{company}}/g,WS.name||'[Company]');
+  msg=msg.replace(/{{job}}/g,'[Role]');
+  document.getElementById('sn-message').value=msg;
+}
+
+async function sendNotification(){
+  const candId=document.getElementById('sn-candidate').value;
+  const msg=document.getElementById('sn-message').value.trim();
+  const channel=document.getElementById('sn-channel').value;
+  if(!candId){toast('Please select a candidate','er');return;}
+  if(!msg){toast('Message cannot be empty','er');return;}
+  const btn=document.getElementById('send-btn');
+  const lbl=document.getElementById('send-label');
+  const spin=document.getElementById('send-spin');
+  btn.disabled=true;lbl.style.display='none';spin.style.display='inline-block';
+
+  const cand=allCandidates.find(c=>c.id===candId);
+  const{error}=await SB.from('notifications_log').insert({
+    workspace_id:WS.id,
+    candidate_id:candId,
+    channel,
+    message_body:msg,
+    status:'sent',
+    sent_at:new Date().toISOString(),
+    sent_by:MEMBER.id,
+  });
+  btn.disabled=false;lbl.style.display='inline';spin.style.display='none';
+  if(error){toast(error.message,'er');return;}
+  toast(`Notification logged for ${cand?.full_name||'candidate'} via ${channel}`,'ok');
+  closeSendModal();
+  document.getElementById('sn-candidate').value='';
+  document.getElementById('sn-message').value='';
+  document.getElementById('sn-template').value='';
+  await loadAll();
+}
+
+async function signOut(){await SB.auth.signOut();window.location.href='peoplexats_auth.html';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type='ok'){const el=document.createElement('div');el.className=`toast-item ${type}`;el.innerHTML=`<span>${type==='ok'?'✓':'✕'}</span>${esc(msg)}`;document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3500);}
+init();
+</script>
+</body>
+</html>
